@@ -11,7 +11,7 @@ GBCOMPRESS = $(GBDK_HOME)/bin/gbcompress
 # Set platforms to build here, spaced separated. (These are in the separate Makefile.targets)
 # They can also be built/cleaned individually: "make gg" and "make gg-clean"
 # Possible are: gb gbc pocket megaduck sms gg
-TARGETS=gbc # pocket megaduck sms gg
+TARGETS= gbc # pocket megaduck sms gg
 
 # Configure platform specific LCC flags here:
 LCCFLAGS_gb      = -Wl-yt0x1B # Set an MBC for banking (1B-ROM+MBC5+RAM+BATT)
@@ -115,6 +115,7 @@ $(OBJS): $(PNGOBJS)
 # Link the compiled object files into a .gb ROM file
 $(BINS):	$(OBJS)
 	$(LCC) $(LCCFLAGS) $(CFLAGS) -o $(BINDIR)/$(PROJECTNAME).$(EXT) $(PNGOBJS) $(OBJS)
+#	romusage -g -sRp $(BINDIR)/$(PROJECTNAME).$(EXT)
 
 clean:
 	@echo Cleaning
