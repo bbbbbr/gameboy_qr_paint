@@ -33,7 +33,10 @@ void main(void)
             // TODO: Save the drawing (VRAM) to cart SRAM and then restore it after QRcode is done
             drawing_save_to_sram(SRAM_BANK_1);
             image_to_png_qrcode_url();
+
+            // Wait for the user to press a button before clearing QRCode
             waitpadticked_lowcpu(J_ANY);
+            waitpadup();
 
             drawing_restore_from_sram(SRAM_BANK_1);
             drawing_restore_default_colors();
