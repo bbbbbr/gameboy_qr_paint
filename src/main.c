@@ -5,6 +5,7 @@
 #include "input.h"
 
 #include "img_2_qrcode.h"
+#include "draw.h"
 
 
 void main(void)
@@ -30,10 +31,13 @@ void main(void)
 
         if (KEYS() & J_START) {
             // TODO: Save the drawing (VRAM) to cart SRAM and then restore it after QRcode is done
+            drawing_save_to_sram(SRAM_BANK_1);
             image_to_png_qrcode_url();
             waitpadticked_lowcpu(J_ANY);
-            // return_to_drawing_mode();
-            redraw_workarea();
+
+            drawing_restore_from_sram(SRAM_BANK_1);
+            drawing_restore_default_colors();
+            // redraw_workarea();
             SHOW_SPRITES;
         }
 

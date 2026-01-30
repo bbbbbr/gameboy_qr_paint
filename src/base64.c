@@ -2,10 +2,9 @@
 #include <stdint.h>
 #include <string.h>  // For memcopy()
 
-#include <gbdk/emu_debug.h>
-
 #include "common.h"
 #include "base64.h"
+#include <gbdk/emu_debug.h>
 
 
 #pragma bank 255  // Autobanked

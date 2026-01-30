@@ -40,10 +40,6 @@ const uint8_t img_8x8_4_colors_8bpp_encoded_map[] = {
 
 // ===== END PNG TEST IMAGE =====
 
-// Use SRAM for temp buffers
-const uint8_t * SRAM_base  = 0xA000u;
-const uint8_t * SRAM_upper = 0xB000u;
-
 
 const uint8_t pal_1bpp_white_black[] = {
     0xFFu, 0xFFu, 0xFFu,  // White
@@ -56,7 +52,6 @@ const uint8_t pal_1bpp_white_black[] = {
 // - Display tiles arranged for APA mode
 static uint16_t copy_1bpp_image_from_vram(uint8_t * p_out_buf) {
 
-    #define TILE_SZ_BYTES  16u
     DISPLAY_OFF;
     const uint8_t * p_out_buf_start = p_out_buf;
 
@@ -104,12 +99,12 @@ static uint16_t copy_1bpp_image_from_vram(uint8_t * p_out_buf) {
 
 void image_to_png_qrcode_url(void) {
 
-    SWITCH_RAM(0u); // RAM bank 0
+    SWITCH_RAM(SRAM_BANK_0);
 
     // Output buffers in Cart SRAM, no need to allocate them
-    uint8_t * p_img_1bpp_buf       = (uint8_t *)SRAM_upper; // Gets overwritten by Base64 encoded image
-    uint8_t * p_png_buf            = (uint8_t *)SRAM_base;
-    uint8_t * p_base64_png_url_str = (uint8_t *)SRAM_upper;
+    uint8_t * p_img_1bpp_buf       = (uint8_t *)SRAM_UPPER_B000; // Gets overwritten by Base64 encoded image
+    uint8_t * p_png_buf            = (uint8_t *)SRAM_BASE_A000;
+    uint8_t * p_base64_png_url_str = (uint8_t *)SRAM_UPPER_B000;
 
     // ===== Prepare image buffer =====
     EMU_printf("Generating Image\n");

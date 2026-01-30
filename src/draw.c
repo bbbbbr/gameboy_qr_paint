@@ -2,10 +2,11 @@
 #include <stdint.h>
 
 #include <gb/drawing.h>
-#include <gbdk/emu_debug.h>  // Sensitive to duplicated line position across source files
 
 #include "common.h"
 #include "input.h"
+
+#include <gbdk/emu_debug.h>  // Sensitive to duplicated line position across source files
 
 #pragma bank 255  // Autobanked
 
@@ -28,6 +29,28 @@ static const unsigned char mouse_cursors[] = {
   0xFE, 0xA2, 0xFE, 0x82, 0x7E, 0x42, 0x3E, 0x3E
 };
 
+
+void drawing_save_to_sram(uint8_t sram_bank) BANKED {
+
+    SWITCH_RAM(sram_bank);
+    DISPLAY_OFF;
+    vmemcpy(SRAM_BASE_A000, _VRAM8000, _SCRN0 - _VRAM8000); // Copy all tile patterns
+    DISPLAY_ON;
+}
+
+void drawing_restore_from_sram(uint8_t sram_bank) BANKED {
+
+    SWITCH_RAM(sram_bank);
+    DISPLAY_OFF;
+    vmemcpy(_VRAM8000, SRAM_BASE_A000, _SCRN0 - _VRAM8000); // Copy all tile patterns
+    DISPLAY_ON;
+}
+
+// Draws the paint working area
+void drawing_restore_default_colors(void) BANKED {
+    // For pixel drawing
+    color(BLACK,WHITE,SOLID);    
+}
 
 // Draws the paint working area
 void redraw_workarea(void) BANKED {

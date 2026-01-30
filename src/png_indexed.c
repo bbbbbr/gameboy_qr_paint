@@ -3,7 +3,7 @@
 #include <stdbool.h>
 #include <string.h>  // For memcopy()
 
-#include <stdio.h>
+// #include <stdio.h>
 
 #include <gbdk/emu_debug.h>
 

@@ -1,11 +1,11 @@
 #include <gbdk/platform.h>
 #include <gb/drawing.h>
 
+#include <gbdk/emu_debug.h>
 #include <stdint.h>
 #include <stdbool.h>
-#include <stdio.h>
+// #include <stdio.h>
 
-#include <gbdk/emu_debug.h>
 
 #include "qrcodegen.h"
 
