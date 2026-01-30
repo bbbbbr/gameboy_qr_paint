@@ -235,6 +235,10 @@ INLINE int getNumDataCodewords(void) {
 
 /*---- Reed-Solomon ECC generator functions ----*/
 
+// Returns the product of the two given field elements modulo GF(2^8/0x11D).
+// All inputs are valid. This could be implemented as a 256*256 lookup table.
+// TODO: Optimize - try lookup table split into 4 banks
+
 static uint8_t rs_y;
 static uint8_t reedSolomonMultiply(uint8_t x_) {
 	// Russian peasant multiplication

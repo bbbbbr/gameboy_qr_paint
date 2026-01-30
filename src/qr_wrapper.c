@@ -24,7 +24,9 @@ bool qr_generate(const char * embed_str, uint16_t len) NONBANKED {
     uint8_t save_bank = CURRENT_BANK;
     SWITCH_ROM(BANK(qrcodegen));
 
+    EMU_PROFILE_BEGIN(" QRCode Gen prof start ");
     qrcodegen(embed_str, len);
+    EMU_PROFILE_END(" QRCode Gen prof end: ");
 
     SWITCH_ROM(save_bank);
 
@@ -34,10 +36,11 @@ bool qr_generate(const char * embed_str, uint16_t len) NONBANKED {
 
 void qr_render(void) NONBANKED {
 
+    EMU_PROFILE_BEGIN(" QRCode Render prof start ");
     uint8_t save_bank = CURRENT_BANK;
     SWITCH_ROM(BANK(qrcodegen));
 
-    #ifdef SCALE == 1
+    #if SCALE == 1
         for (uint8_t x = 0; x < (QR_FINAL_PIXEL_WIDTH); x++) {
             for (uint8_t y = 0; y < (QR_FINAL_PIXEL_HEIGHT); y++) {
                 if (qr(x,y))                
@@ -66,5 +69,6 @@ void qr_render(void) NONBANKED {
         }
     #endif
 
+    EMU_PROFILE_END(" QRCode Render prof end: ");
     SWITCH_ROM(save_bank);    
 }
