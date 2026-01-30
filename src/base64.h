@@ -9,6 +9,5 @@
 #define B64_CALC_OUT_SZ(len) (((len + (BASE64_IN_LEN - 1u)) / BASE64_IN_LEN) * BASE64_OUT_LEN)
 
 uint16_t base64_encode_to_url(uint8_t * p_dest, const uint8_t * p_src, uint16_t src_len) BANKED;
-static uint16_t base64_encode_url_format(uint8_t * p_dest, const uint8_t * p_src, uint16_t src_len);
 
 #endif // BASE64_H

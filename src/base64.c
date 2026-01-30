@@ -13,7 +13,8 @@
 
 #define PADDING_CHAR '='
 
-// Select which base64 variant to use
+// Select which base64 variant to use (not defined means normal)
+//
 // #define URL_ENCODE
 
 #ifdef URL_ENCODE
