@@ -30,6 +30,9 @@ LCCFLAGS += -Wl-j -Wm-yoA -Wm-ya4 -autobank -Wb-ext=.rel -Wb-v # MBC + Autobanki
 # Bankpack randomize test to check for potential banking errors
 # LCCFLAGS += -Wb-random -Wb-max=15
 
+# Higher optimization (slow builds)
+# LCCFLAGS += -Wf--max-allocs-per-node200000
+
 GBDK_DEBUG = ON
 ifdef GBDK_DEBUG
 	LCCFLAGS += -debug -v
