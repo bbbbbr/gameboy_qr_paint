@@ -6,6 +6,8 @@
 
 // #include <stdio.h>
 
+#pragma bank 255  // Autobanked
+
 #include "common.h"
 
 #include "png_indexed.h"
@@ -13,7 +15,6 @@
 #include "qr_wrapper.h"
 
 
-// TODO: autobank?
 
 // ===== START PNG TEST IMAGE =====
 #define IMG_8X8_4_COLORS_8BPP_ENCODED_WIDTH  8u
@@ -97,7 +98,7 @@ static uint16_t copy_1bpp_image_from_vram(uint8_t * p_out_buf) {
 }
 
 
-void image_to_png_qrcode_url(void) {
+void image_to_png_qrcode_url(void) BANKED {
 
     SWITCH_RAM(SRAM_BANK_0);
 

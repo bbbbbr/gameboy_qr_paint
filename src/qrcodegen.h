@@ -63,7 +63,7 @@ extern uint8_t QRCODE[];
 extern const uint8_t qr_bitmask[];
 
 // uint8_t *qrcodegen(const char *text);
-uint8_t *qrcodegen(const char *text, uint16_t len);
+uint8_t *qrcodegen(const char *text, uint16_t len) BANKED;
 bool qr(uint8_t x, uint8_t y);
 
 bool qr_get(uint8_t x, uint8_t y);

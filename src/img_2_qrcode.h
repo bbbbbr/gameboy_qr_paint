@@ -1,6 +1,6 @@
 #ifndef IMG_2_QRCODE_H
 #define IMG_2_QRCODE_H
 
-void image_to_png_qrcode_url(void);
+void image_to_png_qrcode_url(void) BANKED ;
 
 #endif // IMG_2_QRCODE_H

@@ -5,11 +5,13 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
-// #include <stdio.h>
 
 
 #include "common.h"
 #include "qrcodegen.h"
+
+#pragma bank 255  // Autobanked
+
 
 // See qrcodegen.h for setting the QR code version/capacity
 
@@ -22,7 +24,7 @@
 static void qr_render_scale_1_1bpp_direct(void);
 
 
-bool qr_generate(const char * embed_str, uint16_t len) NONBANKED {
+bool qr_generate(const char * embed_str, uint16_t len) BANKED {
 
     if (len > QR_MAX_PAYLOAD_BYTES) {
         // Optionally emit an error here that size was too large
@@ -30,24 +32,36 @@ bool qr_generate(const char * embed_str, uint16_t len) NONBANKED {
         return false;
     }
 
-    uint8_t save_bank = CURRENT_BANK;
-    SWITCH_ROM(BANK(qrcodegen));
+    // Bank switching is needed for non-direct buffer access renders,
+    // which allows this source file to be auto-banked.
+    //
+    // If using any of the *_apa() rendering modes then REMOVE this file
+    // from auto-banking (due to use of qr_get() which may be in another bank)
+    //
+    // uint8_t save_bank = CURRENT_BANK;
+    // SWITCH_ROM(BANK(qrcodegen));
 
     EMU_PROFILE_BEGIN(" QRCode Gen prof start ");
     qrcodegen(embed_str, len);
     EMU_PROFILE_END(" QRCode Gen prof end: ");
 
-    SWITCH_ROM(save_bank);
+    // SWITCH_ROM(save_bank);
 
     return true;
 }
 
 
-void qr_render(void) NONBANKED {
+void qr_render(void) BANKED {
 
     EMU_PROFILE_BEGIN(" QRCode Render prof start ");
-    uint8_t save_bank = CURRENT_BANK;
-    SWITCH_ROM(BANK(qrcodegen));
+    // Bank switching is needed for non-direct buffer access renders,
+    // which allows this source file to be auto-banked.
+    //
+    // If using any of the *_apa() rendering modes then REMOVE this file
+    // from auto-banking (due to use of qr_get() which may be in another bank)
+    //    
+    // uint8_t save_bank = CURRENT_BANK;
+    // SWITCH_ROM(BANK(qrcodegen));
 
     #if SCALE == 1
         // qr_render_scale_1_apa();
@@ -58,7 +72,7 @@ void qr_render(void) NONBANKED {
     #endif
 
     EMU_PROFILE_END(" QRCode Render prof end: ");
-    SWITCH_ROM(save_bank);
+    // SWITCH_ROM(save_bank);
 }
 
 

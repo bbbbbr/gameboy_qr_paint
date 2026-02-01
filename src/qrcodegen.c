@@ -671,7 +671,7 @@ INLINE void appendBitsToBuffer(unsigned int val, int numBits, uint8_t buffer[], 
 //
 
 // uint8_t *qrcodegen(const char *text) {
-uint8_t *qrcodegen(const char *text, uint16_t len) {
+uint8_t *qrcodegen(const char *text, uint16_t len) BANKED {
     
     
     // uint8_t len = 0;
