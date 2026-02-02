@@ -4,28 +4,32 @@ ifndef GBDK_HOME
 	GBDK_HOME = ../../../
 endif
 
-LCC = $(GBDK_HOME)/bin/lcc
-PNG2ASSET = $(GBDK_HOME)/bin/png2asset
-GBCOMPRESS = $(GBDK_HOME)/bin/gbcompress
+LCC = $(GBDK_HOME)bin/lcc
+PNG2ASSET = $(GBDK_HOME)bin/png2asset
+
+VERSION=0.8.0
 
 # Set platforms to build here, spaced separated. (These are in the separate Makefile.targets)
 # They can also be built/cleaned individually: "make gg" and "make gg-clean"
 # Possible are: gb gbc pocket megaduck sms gg
-TARGETS= gbc # pocket megaduck sms gg
+TARGETS= gbc # megaduck gb pocket megaduck sms gg nes
 
 # Configure platform specific LCC flags here:
-LCCFLAGS_gb      = -Wl-yt0x1B # Set an MBC for banking (1B-ROM+MBC5+RAM+BATT)
-LCCFLAGS_pocket  = -Wl-yt0x1B # Usually the same as required for .gb
-LCCFLAGS_duck    = -Wl-yt0x1B # Usually the same as required for .gb
+LCCFLAGS_gb      = # -Wl-yt0x1B # Set an MBC for banking (1B-ROM+MBC5+RAM+BATT)
+LCCFLAGS_pocket  = # -Wl-yt0x1B # Usually the same as required for .gb
+LCCFLAGS_duck    = # -Wl-yt0x1B # Usually the same as required for .gb
 LCCFLAGS_gbc     = -Wl-yt0x1B -Wm-yc # Same as .gb with: -Wm-yc (gb & gbc) or Wm-yC (gbc exclusive)
 LCCFLAGS_sms     =
 LCCFLAGS_gg      =
-
-LCCFLAGS += -Wm-yC # GB Color required for Hi Color
+LCCFLAGS_nes     =
 
 LCCFLAGS += $(LCCFLAGS_$(EXT)) # This adds the current platform specific LCC Flags
 
-LCCFLAGS += -Wl-j -Wm-yoA -Wm-ya4 -autobank -Wb-ext=.rel -Wb-v # MBC + Autobanking related flags
+LCCFLAGS += -Wl-j -autobank -Wm-yoA -Wm-ya4 -Wb-ext=.rel -Wb-v # MBC + Autobanking related flags (4 sram banks)
+# LCCFLAGS += -v     # Uncomment for lcc verbose output
+# CFLAGS += -v       # Uncomment for compile stage verbose output
+LCCFLAGS += -Wf-MMD -Wf-Wp-MP # Header file dependency output (-MMD) for Makefile use + per-header Phony rules (-MP)
+CFLAGS += -Wf-MMD -Wf-Wp-MP # Header file dependency output (-MMD) for Makefile use + per-header Phony rules (-MP)
 
 # Bankpack randomize test to check for potential banking errors
 # LCCFLAGS += -Wb-random -Wb-max=15
@@ -33,98 +37,104 @@ LCCFLAGS += -Wl-j -Wm-yoA -Wm-ya4 -autobank -Wb-ext=.rel -Wb-v # MBC + Autobanki
 # Higher optimization (slow builds)
 # LCCFLAGS += -Wf--max-allocs-per-node200000
 
+# Audio driver
+# LCCFLAGS += -Wl-llib/$(PLAT)/hUGEDriver.lib
+
+# Set CGB Boot ROM color palette to 0x13
+# 1. Old Licensee is already 0x33 -> Use New Licensee
+# 2. Sets New Licensee to "01" "(Nintendo)
+# 3. (Calculated by Sum of ROM Header title bytes 0x134 - 0x143) & 0xFF = 0x58 = Grey CGB palette (id:0x16 -> checksum 0x58)  
+#    https://gbdev.io/pandocs/Power_Up_Sequence.html#compatibility-palettes
+#    https://tcrf.net/Notes:Game_Boy_Color_Bootstrap_ROM#Manual_Select_Palette_Configurations
+# Set ROM Title / Name
+# LCCFLAGS += -Wm-yn"4PLAYERGBDK?"
+# LCCFLAGS += -Wm-yk01
+
 GBDK_DEBUG = ON
 ifdef GBDK_DEBUG
 	LCCFLAGS += -debug -v
 endif
 
-
-# Add directory where platform specific meta tile sprites get converted into (obj/<platform ext>/src)
-# So they can be included with "#include <res/somefile.h>"
-CFLAGS += -I$(OBJDIR)  -I$(RESOBJSRC)
-
 # You can set the name of the ROM file here
 PROJECTNAME = qrcode_png
 
+
+PACKAGE_DIR = "../build_archive/$(VERSION)"
+
+# EXT?=gb # Only sets extension to default (game boy .gb) if not populated
 SRCDIR      = src
 OBJDIR      = obj/$(EXT)
-RESOBJSRC   = obj/$(EXT)/res
+RESOBJSRC   = $(OBJDIR)/res
 RESDIR      = res
 BINDIR      = build/$(EXT)
 MKDIRS      = $(OBJDIR) $(BINDIR) $(RESOBJSRC) # See bottom of Makefile for directory auto-creation
 
+CFLAGS += -I$(RESOBJSRC)
+
+# For png2asset: converting source pngs -> .c -> .o
+IMGPNGS     = $(foreach dir,$(RESDIR),$(notdir $(wildcard $(dir)/*.png)))
+IMGSOURCES  = $(IMGPNGS:%.png=$(RESOBJSRC)/%.c)
+IMGOBJS     = $(IMGSOURCES:$(RESOBJSRC)/%.c=$(OBJDIR)/%.o)
+
 BINS	    = $(OBJDIR)/$(PROJECTNAME).$(EXT)
-
-# For .png -> png2asset -> .bin -> gbcompress -> .c -> compile -> .o
-# When exporting to .bin the single png input file gets split into _map.bin and _tiles.bin, etc output files along with a header file
-PNGS        = $(foreach dir,$(RESDIR),$(notdir $(wildcard $(dir)/*.png)))
-PNGSRCS     = $(PNGS:%.png=$(RESOBJSRC)/%.c)
-PNGOBJS     = $(PNGSRCS:%.c=$(OBJDIR)/%.o)
-PNGOBJS     = $(PNGSRCS:$(RESOBJSRC)/%.c=$(OBJDIR)/%.o)
-
 CSOURCES    = $(foreach dir,$(SRCDIR),$(notdir $(wildcard $(dir)/*.c))) $(foreach dir,$(RESDIR),$(notdir $(wildcard $(dir)/*.c)))
+
 ASMSOURCES  = $(foreach dir,$(SRCDIR),$(notdir $(wildcard $(dir)/*.s)))
 OBJS        = $(CSOURCES:%.c=$(OBJDIR)/%.o) $(ASMSOURCES:%.s=$(OBJDIR)/%.o)
+
+# Dependencies (using output from -Wf-MMD -Wf-Wp-MP)
+DEPS = $(OBJS:%.o=%.d)
+
+-include $(DEPS)
 
 # Builds all targets sequentially
 all: $(TARGETS)
 
-compile.bat: Makefile
-	@echo "REM Automatically generated from Makefile" > compile.bat
-	@make -sn | sed y/\\//\\\\/ | grep -v make >> compile.bat
 
-
-# ===== Start png conversion and zx0 compression =====
-
-# For .png -> png2asset -> .c -> compile -> .o
-
-
-# All of the multiple targets (map, map_attributes, palettes, tiles) 
-# will get generated by the single prerequisite of the matching %.png
+# Use png2asset to convert the png into C formatted metasprite data
+# Convert metasprite .pngs in res/ -> .c files in obj/<platform ext>/src/
 $(RESOBJSRC)/%.c:	$(RESDIR)/%.png
-	$(PNG2ASSET) $< -o $(subst _map,,$@) -use_metafile 
+	$(PNG2ASSET) $< `cat <$<.meta 2>/dev/null` -c $@
 
-
-# OPTIONAL (but not needed)
-# Prevent make from deleting intermediary generated compressed png C source files
-.SECONDARY: $(PNGSRCS)
-
-# Compile the compressed pngs image data in the .c files
-# .c files in obj/$(EXT)/res -> .o files in obj/
+# Compile the pngs that were converted to .c files
+# .c files in obj/res/ -> .o files in obj/
 $(OBJDIR)/%.o:	$(RESOBJSRC)/%.c
 	$(LCC) $(LCCFLAGS) $(CFLAGS) -c -o $@ $<
-
-# ===== End png conversion and zx0 compression =====
-
 
 
 # Compile .c files in "src/" to .o object files
 $(OBJDIR)/%.o:	$(SRCDIR)/%.c
-	$(LCC) $(LCCFLAGS) $(CFLAGS) -c -o $@ $<
+	$(LCC) $(CFLAGS) -c -o $@ $<
 
 # Compile .c files in "res/" to .o object files
 $(OBJDIR)/%.o:	$(RESDIR)/%.c
-	$(LCC) $(LCCFLAGS) $(CFLAGS) -c -o $@ $<
+	$(LCC) $(CFLAGS) -c -o $@ $<
 
 # Compile .s assembly files in "src/" to .o object files
 $(OBJDIR)/%.o:	$(SRCDIR)/%.s
-	$(LCC) $(LCCFLAGS) $(CFLAGS) -c -o $@ $<
+	$(LCC) $(CFLAGS) -c -o $@ $<
 
 # If needed, compile .c files in "src/" to .s assembly files
 # (not required if .c is compiled directly to .o)
 $(OBJDIR)/%.s:	$(SRCDIR)/%.c
-	$(LCC) $(LCCFLAGS) $(CFLAGS) -S -o $@ $<
+	$(LCC) $(CFLAGS) -S -o $@ $<
 
-# Convert and build png images first so they're available when compiling the main sources
-$(OBJS): $(PNGOBJS)
+# Convert images first so they're available when compiling the main sources
+$(OBJS):	$(IMGOBJS)
 
 # Link the compiled object files into a .gb ROM file
 $(BINS):	$(OBJS)
-	$(LCC) $(LCCFLAGS) $(CFLAGS) -o $(BINDIR)/$(PROJECTNAME).$(EXT) $(PNGOBJS) $(OBJS)
-#	romusage -g -sRp $(BINDIR)/$(PROJECTNAME).$(EXT)
+	$(LCC) $(LCCFLAGS) -o $(BINDIR)/$(PROJECTNAME).$(EXT) $(OBJS) $(IMGOBJS)
+
+clean:
+	@echo Cleaning
+	@for target in $(TARGETS); do \
+		$(MAKE) $$target-clean; \
+	done
 
 romusage:
-	romusage -g -sRp $(BINDIR)/gbc/$(PROJECTNAME).noi
+	# Ignores failure if romusage not in path
+	-romusage -g -sRp build/gbc/$(PROJECTNAME).noi
 
 pngcheck:
 	@echo --------------------------------------------------
@@ -143,18 +153,14 @@ qrcodeluts:
 	util/reedsolomon_mmul_lut 2 > $(SRCDIR)/qrcode_rsmul_lut_2.c
 	util/reedsolomon_mmul_lut 3 > $(SRCDIR)/qrcode_rsmul_lut_3.c
 
-clean:
-	@echo Cleaning
-	@for target in $(TARGETS); do \
-		$(MAKE) $$target-clean; \
-	done
+package:
+	mkdir -p "$(PACKAGE_DIR)"
+#	zip -j -9 "$(PACKAGE_DIR)/$(VERSION)_$(PROJECTNAME)_megaduck.zip"            README.md build/duck/*.duck
+	zip -j -9 "$(PACKAGE_DIR)/$(VERSION)_$(PROJECTNAME)_gameboy.zip"             README.md build/gb/*.gb
+
 
 # Include available build targets
 include Makefile.targets
-
-# make -d to debug
-# With builtin rules turned off for less noise:
-# MAKEFLAGS += --no-builtin-rules
 
 
 # create necessary directories after Makefile is parsed but before build

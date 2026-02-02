@@ -5,7 +5,8 @@
 
 #include "common.h"
 #include "input.h"
-
+#include <ui_main.h>      // BG APA style image
+#include <ui_main_cde.h>  // BG APA style image  // CDE alternate theme
 #include <gbdk/emu_debug.h>  // Sensitive to duplicated line position across source files
 
 #pragma bank 255  // Autobanked
@@ -34,7 +35,7 @@ void drawing_save_to_sram(uint8_t sram_bank) BANKED {
 
     SWITCH_RAM(sram_bank);
     DISPLAY_OFF;
-    vmemcpy(SRAM_BASE_A000, _VRAM8000, _SCRN0 - _VRAM8000); // Copy all tile patterns
+    vmemcpy((uint8_t *)SRAM_BASE_A000, (uint8_t *)_VRAM8000, _SCRN0 - _VRAM8000); // Copy all tile patterns
     DISPLAY_ON;
 }
 
@@ -42,7 +43,7 @@ void drawing_restore_from_sram(uint8_t sram_bank) BANKED {
 
     SWITCH_RAM(sram_bank);
     DISPLAY_OFF;
-    vmemcpy(_VRAM8000, SRAM_BASE_A000, _SCRN0 - _VRAM8000); // Copy all tile patterns
+    vmemcpy((uint8_t *)_VRAM8000, (uint8_t *)SRAM_BASE_A000, _SCRN0 - _VRAM8000); // Copy all tile patterns
     DISPLAY_ON;
 }
 
@@ -53,9 +54,25 @@ void drawing_restore_default_colors(void) BANKED {
 }
 
 // Draws the paint working area
-void redraw_workarea(void) BANKED {
+// void redraw_workarea(void) NONBANKED {
+void redraw_workarea(void) NONBANKED BANKED {
 
     DISPLAY_OFF;
+
+    uint8_t save_bank = CURRENT_BANK;
+
+    // Alternate CDE theme by holding SELECT
+    if (KEY_PRESSED(J_SELECT)) {
+        SWITCH_ROM(BANK(ui_main_cde));
+        draw_image(ui_main_cde_tiles);
+        SWITCH_ROM(save_bank);
+    } else {
+        SWITCH_ROM(BANK(ui_main));
+        draw_image(ui_main_tiles);
+        SWITCH_ROM(save_bank);
+    }
+
+/*
     // Fill screen with black
     color(BLACK, BLACK, SOLID);
     box(0u, 0u, DEVICE_SCREEN_PX_WIDTH - 1u, DEVICE_SCREEN_PX_HEIGHT - 1u, M_FILL);
@@ -63,7 +80,7 @@ void redraw_workarea(void) BANKED {
     // Fill active image area in white
     color(WHITE, WHITE, SOLID);
     box(IMG_X_START, IMG_Y_START, IMG_X_END, IMG_Y_END, M_FILL);
-
+*/
     // For pixel drawing
     color(BLACK,WHITE,SOLID);
 

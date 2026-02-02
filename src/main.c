@@ -20,10 +20,11 @@ void make_and_show_qrcode(void) {
 
     drawing_save_to_sram(SRAM_BANK_1);
 
-    if (_cpu == CGB_TYPE)  set_bkg_palette(0u, 1u, QR_PAL_CGB);
-    else                   BGP_REG = QR_PAL_DMG;
 
-        image_to_png_qrcode_url();
+    image_to_png_qrcode_url();
+
+        if (_cpu == CGB_TYPE)  set_bkg_palette(0u, 1u, QR_PAL_CGB);
+        else                   BGP_REG = QR_PAL_DMG;
 
         // Much more efficient than making a white border by shifting the tile-aligned QRCode output
         scroll_bkg(-1,-1);
