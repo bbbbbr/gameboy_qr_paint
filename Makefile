@@ -156,7 +156,7 @@ qrcodeluts:
 package:
 	mkdir -p "$(PACKAGE_DIR)"
 #	zip -j -9 "$(PACKAGE_DIR)/$(VERSION)_$(PROJECTNAME)_megaduck.zip"            README.md build/duck/*.duck
-	zip -j -9 "$(PACKAGE_DIR)/$(VERSION)_$(PROJECTNAME)_gameboy.zip"             README.md build/gb/*.gb
+	zip -j -9 "$(PACKAGE_DIR)/$(VERSION)_$(PROJECTNAME)_gameboy.zip"             LICENSE README.md build/gbc/*.gbc
 
 
 # Include available build targets
