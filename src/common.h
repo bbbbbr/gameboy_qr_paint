@@ -50,13 +50,84 @@
 #define APA_MODE_VRAM_SZ    ((_SCRN0 - _VRAM8000) - 0x100u)
 
 
+#define SCREEN_X_MIN_16U  (0u)
+#define SCREEN_Y_MIN_16U  (0u)
+#define SCREEN_X_MAX_16U  (CURSOR_8U_TO_16U(DEVICE_SCREEN_PX_WIDTH - 1u))
+#define SCREEN_Y_MAX_16U  (CURSOR_8U_TO_16U(DEVICE_SCREEN_PX_HEIGHT - 1u))
 
-// typedef struct settings_t {
-//     uint8_t something;
-// } settings_t;
+#define SCREEN_X_MIN_8U  (0u)
+#define SCREEN_Y_MIN_8U  (0u)
+#define SCREEN_X_MAX_8U  (DEVICE_SCREEN_PX_WIDTH - 1u)
+#define SCREEN_Y_MAX_8U  (DEVICE_SCREEN_PX_HEIGHT - 1u)
+
+
+#define SPRITE_MOUSE_CURSOR 0u
+#define CURSOR_POS_UNSET_8U    0xFFu
+
+#define CURSOR_8U_TO_16U(value) ((uint16_t)value << 8)
+#define CURSOR_TO_8U_X() ((uint8_t)(app_state.cursor_x >> 8))
+#define CURSOR_TO_8U_Y() ((uint8_t)(app_state.cursor_y >> 8))
+
+#define CURSOR_SPEED_PIXELSTEP  (CURSOR_8U_TO_16U(1u))
+#define CURSOR_SPEED_FAST       (CURSOR_8U_TO_16U(1u))
+#define CURSOR_SPEED_NORMAL     (CURSOR_8U_TO_16U(1u) / 2u) 
+#define CURSOR_SPEED_UI         (CURSOR_8U_TO_16U(1u) + (CURSOR_8U_TO_16U(1u) / 2u))
+
+
+enum {
+    CURSOR_SPEED_MODE_MIN,
+
+    CURSOR_SPEED_MODE_PIXELSTEP = CURSOR_SPEED_MODE_MIN,
+    CURSOR_SPEED_MODE_NORMAL,
+    CURSOR_SPEED_MODE_FAST,
+
+    CURSOR_SPEED_MODE_MAX = CURSOR_SPEED_MODE_FAST,    
+    CURSOR_SPEED_MODE_DEFAULT = CURSOR_SPEED_MODE_NORMAL,
+};
+
+enum {
+    CURSOR_TELEPORT_MIN,
+
+    CURSOR_TELEPORT_DRAWING = CURSOR_TELEPORT_MIN,
+    CURSOR_TELEPORT_LEFT_MENU,
+    CURSOR_TELEPORT_RIGHT_MENU,
+
+    CURSOR_TELEPORT_MAX = CURSOR_TELEPORT_RIGHT_MENU,    
+    CURSOR_TELEPORT_DEFAULT = CURSOR_TELEPORT_DRAWING,
+};
+
+
+
+typedef struct app_state_t {
+
+    uint8_t  save_slot_current;
+
+    uint16_t cursor_x;
+    uint16_t cursor_y;
+
+    uint8_t cursor_8u_cache_x;
+    uint8_t cursor_8u_cache_y;
+
+    uint8_t cursor_8u_last_x;
+    uint8_t cursor_8u_last_y;
+
+    uint16_t cursor_draw_saved_x;
+    uint16_t cursor_draw_saved_y;
+    uint16_t cursor_left_menu_saved_x;
+    uint16_t cursor_left_menu_saved_y;
+    uint16_t cursor_right_menu_saved_x;
+    uint16_t cursor_right_menu_saved_y;
+
+    bool     buttons_up_pending; // Helps mask some button presses
+
+    uint8_t  cursor_speed_mode;
+    uint8_t  cursor_teleport_zone;
+
+} app_state_t;
 
 // TODO: Make this part of global status struct
-extern uint8_t save_slot_current;
+extern app_state_t app_state;
 
+void app_state_reset(void) BANKED;
 
 #endif // COMMON_H

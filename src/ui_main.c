@@ -1,0 +1,254 @@
+#include <gbdk/platform.h>
+#include <stdint.h>
+
+#include <gb/drawing.h>
+
+#include "common.h"
+#include "input.h"
+
+#include "draw.h"
+#include "ui_main.h"
+
+#include <ui_main_bg.h>      // BG APA style image
+#include <ui_main_bg_cde.h>  // BG APA style image  // CDE alternate theme
+
+#pragma bank 255  // Autobanked
+
+
+// TODO: make proper resource images out of these cursors
+static const unsigned char mouse_cursors[] = {
+  // Arrow 1
+  0xFE, 0xFE, 0xFC, 0x84, 0xF8, 0x98, 0xF8, 0xA8,
+  0xFC, 0xB4, 0xCE, 0xCA, 0x87, 0x85, 0x03, 0x03,
+  // Arrow 2
+  0x80, 0x80, 0xC0, 0xC0, 0xE0, 0xA0, 0xF0, 0x90,
+  0xF8, 0x88, 0xF0, 0xB0, 0xD8, 0xD8, 0x08, 0x08,
+  // Arrow 3
+  0x80, 0x80, 0xC0, 0xC0, 0xE0, 0xA0, 0xF0, 0x90,
+  0xF8, 0x88, 0xFC, 0x84, 0xF8, 0x98, 0xE0, 0xE0,
+  // Hand
+  0x10, 0x10, 0x38, 0x28, 0x38, 0x28, 0x7E, 0x6E,
+  0xFE, 0xA2, 0xFE, 0x82, 0x7E, 0x42, 0x3E, 0x3E
+};
+
+
+static void ui_cursor_teleport_save_zone(uint8_t teleport_zone_to_save);
+static inline void ui_cursor_update(uint8_t cursor_8u_x, uint8_t cursor_8u_y);
+static inline bool ui_check_cursor_in_draw_area(void);
+static void ui_process_input(uint8_t cursor_in_drawing);
+static void ui_redraw_workarea(void);
+
+
+void ui_init(void)  BANKED {
+    HIDE_BKG;
+    HIDE_SPRITES;
+
+    set_sprite_data(0u, 2u, mouse_cursors);
+    set_sprite_tile(SPRITE_MOUSE_CURSOR, 1u);
+    move_sprite(0, 160u / 2, 144u / 2);
+
+    // == Enters drawing mode ==
+    mode(M_DRAWING);
+
+    ui_redraw_workarea();
+
+    DISPLAY_ON;
+    SPRITES_8x8;
+
+    SHOW_BKG;
+    SHOW_SPRITES;
+}
+
+
+void ui_update(void) BANKED {
+
+    // Split UI handling between drawing area and UI
+    // drawing area has different movement speed options than main UI area
+    ui_process_input( ui_check_cursor_in_draw_area() );
+
+    uint8_t cursor_8u_x = app_state.cursor_8u_cache_x;
+    uint8_t cursor_8u_y = app_state.cursor_8u_cache_y;
+
+    ui_cursor_update(cursor_8u_x, cursor_8u_y);
+
+    if ( ui_check_cursor_in_draw_area() ) {
+        draw_update(cursor_8u_x, cursor_8u_y);  // TODO: more complex
+    } else {
+        // ui_handle_interface(cursor_8u_x, cursor_8u_y);
+    }
+
+}
+
+
+void ui_redraw_after_qrcode(void) BANKED {
+    // Refresh the UI
+    ui_redraw_workarea();
+
+    // Then restore the drawing on top of it
+    drawing_restore_from_sram(SRAM_BANK_CUR_DRAWING_CACHE, DRAWING_SAVE_SLOT_MIN);
+    drawing_restore_default_colors();    
+}
+
+
+void ui_cycle_cursor_speed(void) BANKED {
+
+    app_state.cursor_speed_mode++;
+    if (app_state.cursor_speed_mode > CURSOR_SPEED_MODE_MAX)
+        app_state.cursor_speed_mode = CURSOR_SPEED_MODE_MIN;
+}
+
+
+static void ui_cursor_teleport_save_zone(uint8_t teleport_zone_to_save) {
+
+    switch(teleport_zone_to_save) {
+        case CURSOR_TELEPORT_DRAWING:
+            app_state.cursor_draw_saved_x = app_state.cursor_x;
+            app_state.cursor_draw_saved_y = app_state.cursor_y;
+            break;
+
+        case CURSOR_TELEPORT_LEFT_MENU:
+            app_state.cursor_left_menu_saved_x = app_state.cursor_x;
+            app_state.cursor_left_menu_saved_y = app_state.cursor_y;
+            break;
+
+        case CURSOR_TELEPORT_RIGHT_MENU:
+            app_state.cursor_right_menu_saved_x = app_state.cursor_x;
+            app_state.cursor_right_menu_saved_y = app_state.cursor_y;
+            break;
+    }
+}    
+
+void ui_cycle_cursor_teleport(void) BANKED {
+
+    // Save cursor position of current state
+    ui_cursor_teleport_save_zone(app_state.cursor_teleport_zone);
+
+    // Step to the next state
+    app_state.cursor_teleport_zone++;
+    if (app_state.cursor_teleport_zone > CURSOR_TELEPORT_MAX)
+        app_state.cursor_teleport_zone = CURSOR_TELEPORT_MIN;
+
+    // Restore cursor position for new state
+    switch(app_state.cursor_teleport_zone) {
+        case CURSOR_TELEPORT_DRAWING:
+            app_state.cursor_x = app_state.cursor_draw_saved_x;
+            app_state.cursor_y = app_state.cursor_draw_saved_y;
+            break;
+
+        case CURSOR_TELEPORT_LEFT_MENU:
+            app_state.cursor_x = app_state.cursor_left_menu_saved_x;
+            app_state.cursor_y = app_state.cursor_left_menu_saved_y;
+            break;
+
+        case CURSOR_TELEPORT_RIGHT_MENU:
+            app_state.cursor_x = app_state.cursor_right_menu_saved_x;
+            app_state.cursor_y = app_state.cursor_right_menu_saved_y;
+            break;
+    }
+}
+
+
+// ===== Local functions =====
+
+
+static void inline ui_cursor_update(uint8_t cursor_8u_x, uint8_t cursor_8u_y) {
+
+    // Move the cursor
+    // TODO: Maybe fancier updates here later
+    move_sprite(SPRITE_MOUSE_CURSOR, cursor_8u_x + DEVICE_SPRITE_PX_OFFSET_X, cursor_8u_y + DEVICE_SPRITE_PX_OFFSET_Y);
+}
+
+
+static inline bool ui_check_cursor_in_draw_area(void) {
+
+    uint8_t cursor_8u_x = app_state.cursor_8u_cache_x;
+    uint8_t cursor_8u_y = app_state.cursor_8u_cache_y;
+
+    // TODO: May need an exception here for line or circle drawing to allow cursor control past drawing area
+    if ((cursor_8u_x >= IMG_X_START) && (cursor_8u_x <= IMG_X_END) &&
+        (cursor_8u_y >= IMG_Y_START) && (cursor_8u_y <= IMG_Y_END)) {
+        return true;
+    }
+    else return false;
+}
+
+
+static void ui_process_input(uint8_t cursor_in_drawing) {
+
+    // TODO: THIS COULD BE SIMPLIFIED A LOT OF THERE WERE ONLY 2 TELEPORT ZONES (MENU / DRAWING)
+    // Three teleport zones feels too complicated right now
+
+    // // Check if cursor needs an auto-teleport update due to manually navigating between areas
+    // if (app_state.cursor_teleport_zone == CURSOR_TELEPORT_DRAWING) && (cursor_in_drawing == false)
+    //     ui_cursor_teleport_save_zone(CURSOR_TELEPORT_DRAWING);
+    //     app_state.cursor_teleport_zone = ... LEFT OR RIGHT MENU?
+
+    // Check for request to teleport between menus/drawing
+    if (KEY_TICKED(J_B)) ui_cycle_cursor_teleport();
+
+
+    if (!cursor_in_drawing) {
+        // For the main UI area there is only one speed of cursor movement (fast)
+        if      (KEYS() & J_LEFT)  { if (app_state.cursor_x > CURSOR_SPEED_UI) app_state.cursor_x -= CURSOR_SPEED_UI; }
+        else if (KEYS() & J_RIGHT) { if (app_state.cursor_x < (SCREEN_X_MAX_16U - CURSOR_SPEED_UI)) app_state.cursor_x += CURSOR_SPEED_UI; }
+
+        if      (KEYS() & J_UP)   { if (app_state.cursor_y > CURSOR_SPEED_UI) app_state.cursor_y -= CURSOR_SPEED_UI; }
+        else if (KEYS() & J_DOWN) { if (app_state.cursor_y < (SCREEN_Y_MAX_16U - CURSOR_SPEED_UI)) app_state.cursor_y += CURSOR_SPEED_UI; }
+    }
+    else {
+        // Drawing area cursor handling
+        uint8_t cursor_speed_mode = app_state.cursor_speed_mode;
+        if (cursor_speed_mode == CURSOR_SPEED_MODE_PIXELSTEP) {
+
+            if      (KEY_TICKED(J_LEFT))  { if (app_state.cursor_x > CURSOR_SPEED_PIXELSTEP) app_state.cursor_x -= CURSOR_SPEED_PIXELSTEP; }
+            else if (KEY_TICKED(J_RIGHT)) { if (app_state.cursor_x < (SCREEN_X_MAX_16U - CURSOR_SPEED_PIXELSTEP)) app_state.cursor_x += CURSOR_SPEED_PIXELSTEP; }
+
+            if      (KEY_TICKED(J_UP))   { if (app_state.cursor_y > CURSOR_SPEED_PIXELSTEP) app_state.cursor_y -= CURSOR_SPEED_PIXELSTEP; }
+            else if (KEY_TICKED(J_DOWN)) { if (app_state.cursor_y < (SCREEN_Y_MAX_16U - CURSOR_SPEED_PIXELSTEP)) app_state.cursor_y += CURSOR_SPEED_PIXELSTEP; }
+        }
+        else if (cursor_speed_mode == CURSOR_SPEED_MODE_NORMAL) {
+
+            if      (KEYS() & J_LEFT)  { if (app_state.cursor_x > CURSOR_SPEED_NORMAL) app_state.cursor_x -= CURSOR_SPEED_NORMAL; }
+            else if (KEYS() & J_RIGHT) { if (app_state.cursor_x < (SCREEN_X_MAX_16U - CURSOR_SPEED_NORMAL)) app_state.cursor_x += CURSOR_SPEED_NORMAL; }
+
+            if      (KEYS() & J_UP)   { if (app_state.cursor_y > CURSOR_SPEED_NORMAL) app_state.cursor_y -= CURSOR_SPEED_NORMAL; }
+            else if (KEYS() & J_DOWN) { if (app_state.cursor_y < (SCREEN_Y_MAX_16U - CURSOR_SPEED_NORMAL)) app_state.cursor_y += CURSOR_SPEED_NORMAL; }
+        }
+        else { // implied: if (cursor_speed_mode == CURSOR_SPEED_MODE_FAST) {
+
+            if      (KEYS() & J_LEFT)  { if (app_state.cursor_x > CURSOR_SPEED_FAST) app_state.cursor_x -= CURSOR_SPEED_FAST; }
+            else if (KEYS() & J_RIGHT) { if (app_state.cursor_x < (SCREEN_X_MAX_16U - CURSOR_SPEED_FAST)) app_state.cursor_x += CURSOR_SPEED_FAST; }
+
+            if      (KEYS() & J_UP)   { if (app_state.cursor_y > CURSOR_SPEED_FAST) app_state.cursor_y -= CURSOR_SPEED_FAST; }
+            else if (KEYS() & J_DOWN) { if (app_state.cursor_y < (SCREEN_Y_MAX_16U - CURSOR_SPEED_FAST)) app_state.cursor_y += CURSOR_SPEED_FAST; }
+        }
+    }
+
+    // Refresh the cached 8 bit cursor position
+    app_state.cursor_8u_cache_x = CURSOR_TO_8U_X();
+    app_state.cursor_8u_cache_y = CURSOR_TO_8U_Y();
+}
+
+
+// Draws the paint working area
+static void ui_redraw_workarea(void) NONBANKED {
+
+    DISPLAY_OFF;
+
+    uint8_t save_bank = CURRENT_BANK;
+
+    // Alternate CDE theme by holding SELECT
+    if (KEY_PRESSED(J_SELECT)) {
+        SWITCH_ROM(BANK(ui_main_bg_cde));
+        draw_image(ui_main_bg_cde_tiles);
+        SWITCH_ROM(save_bank);
+    } else {
+        SWITCH_ROM(BANK(ui_main_bg));
+        draw_image(ui_main_bg_tiles);
+        SWITCH_ROM(save_bank);
+    }
+
+    DISPLAY_ON;
+
+    // EMU_printf("Display: %hux%hu\n", (uint8_t)IMG_WIDTH_PX, (uint8_t)IMG_HEIGHT_PX);
+}

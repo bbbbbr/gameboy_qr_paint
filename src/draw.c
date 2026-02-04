@@ -5,30 +5,12 @@
 
 #include "common.h"
 #include "input.h"
-#include <ui_main.h>      // BG APA style image
-#include <ui_main_cde.h>  // BG APA style image  // CDE alternate theme
+
+#include "ui_main.h"
+
 #include <gbdk/emu_debug.h>  // Sensitive to duplicated line position across source files
 
 #pragma bank 255  // Autobanked
-
-
-#define SPRITE_MOUSE_CURSOR 0u
-#define CURSOR_POS_UNSET    0xFFu
-
-static const unsigned char mouse_cursors[] = {
-  // Arrow 1
-  0xFE, 0xFE, 0xFC, 0x84, 0xF8, 0x98, 0xF8, 0xA8,
-  0xFC, 0xB4, 0xCE, 0xCA, 0x87, 0x85, 0x03, 0x03,
-  // Arrow 2
-  0x80, 0x80, 0xC0, 0xC0, 0xE0, 0xA0, 0xF0, 0x90,
-  0xF8, 0x88, 0xF0, 0xB0, 0xD8, 0xD8, 0x08, 0x08,
-  // Arrow 3
-  0x80, 0x80, 0xC0, 0xC0, 0xE0, 0xA0, 0xF0, 0x90,
-  0xF8, 0x88, 0xFC, 0x84, 0xF8, 0x98, 0xE0, 0xE0,
-  // Hand
-  0x10, 0x10, 0x38, 0x28, 0x38, 0x28, 0x7E, 0x6E,
-  0xFE, 0xA2, 0xFE, 0x82, 0x7E, 0x42, 0x3E, 0x3E
-};
 
 #define DRAWING_ROW_OF_TILES_SZ   (IMG_WIDTH_TILES * TILE_SZ_BYTES)
 #define SCREEN_ROW_SZ             (DEVICE_SCREEN_WIDTH * TILE_SZ_BYTES)
@@ -75,13 +57,13 @@ void drawing_restore_from_sram(uint8_t sram_bank, uint8_t save_slot) BANKED {
 static void test_load_save(void) {
     
     switch (GET_KEYS_TICKED(~J_SELECT)) {
-        case J_UP:   if (save_slot_current > DRAWING_SAVE_SLOT_MIN) save_slot_current--;
+        case J_UP:   if (app_state.save_slot_current > DRAWING_SAVE_SLOT_MIN) app_state.save_slot_current--;
             break;
-        case J_DOWN: if (save_slot_current < DRAWING_SAVE_SLOT_MAX) save_slot_current++;
+        case J_DOWN: if (app_state.save_slot_current < DRAWING_SAVE_SLOT_MAX) app_state.save_slot_current++;
             break;
-        case J_A:    drawing_restore_from_sram(SRAM_BANK_DRAWING_SAVES, save_slot_current);
+        case J_A:    drawing_restore_from_sram(SRAM_BANK_DRAWING_SAVES, app_state.save_slot_current);
             break;
-        case J_B:    drawing_save_to_sram(SRAM_BANK_DRAWING_SAVES, save_slot_current);
+        case J_B:    drawing_save_to_sram(SRAM_BANK_DRAWING_SAVES, app_state.save_slot_current);
             break;
     }
 }
@@ -93,90 +75,23 @@ void drawing_restore_default_colors(void) BANKED {
     color(BLACK,WHITE,SOLID);    
 }
 
-// Draws the paint working area
-// void redraw_workarea(void) NONBANKED {
-void redraw_workarea(void) NONBANKED {
-
-    DISPLAY_OFF;
-
-    uint8_t save_bank = CURRENT_BANK;
-
-    // Alternate CDE theme by holding SELECT
-    if (KEY_PRESSED(J_SELECT)) {
-        SWITCH_ROM(BANK(ui_main_cde));
-        draw_image(ui_main_cde_tiles);
-        SWITCH_ROM(save_bank);
-    } else {
-        SWITCH_ROM(BANK(ui_main));
-        draw_image(ui_main_tiles);
-        SWITCH_ROM(save_bank);
-    }
-
-    /*
-    // TODO: Removable. Old style of rendering drawing vs border area
-    // Fill screen with black
-    color(BLACK, BLACK, SOLID);
-    box(0u, 0u, DEVICE_SCREEN_PX_WIDTH - 1u, DEVICE_SCREEN_PX_HEIGHT - 1u, M_FILL);
-
-    // Fill active image area in white
-    color(WHITE, WHITE, SOLID);
-    box(IMG_X_START, IMG_Y_START, IMG_X_END, IMG_Y_END, M_FILL);
-    */
-    // For pixel drawing
-    color(BLACK,WHITE,SOLID);
-
-    DISPLAY_ON;
-
-    EMU_printf("Display: %hux%hu\n", (uint8_t)IMG_WIDTH_PX, (uint8_t)IMG_HEIGHT_PX);
-}
 
 
 void draw_init(void) BANKED {
-    HIDE_BKG;
-    HIDE_SPRITES;
 
-    set_sprite_data(0u, 2u, mouse_cursors);
-    set_sprite_tile(SPRITE_MOUSE_CURSOR, 1u);
-    move_sprite(0, 160u / 2, 144u / 2);
-
-    // == Enters drawing mode ==
-    mode(M_DRAWING);
-
-    redraw_workarea();
-
-    DISPLAY_ON;
-    SPRITES_8x8;
-
-    SHOW_BKG;
-    SHOW_SPRITES;
+    // Set default brush For pixel drawing
+    color(BLACK,WHITE,SOLID);
 }
 
 
 // Expects UPDATE_KEYS() to have been called before each invocation
-void draw_update(void) BANKED {
+void draw_update(uint8_t cursor_8u_x, uint8_t cursor_8u_y) BANKED {
 
-    if (KEY_PRESSED(J_SELECT)) {
-        test_load_save();
-        return;
-    }
-
-    static uint8_t last_cursor_x = CURSOR_POS_UNSET;
-    static uint8_t last_cursor_y = CURSOR_POS_UNSET;
-
-    static uint8_t cursor_x = DEVICE_SCREEN_PX_WIDTH / 2;
-    static uint8_t cursor_y = DEVICE_SCREEN_PX_HEIGHT / 2;
-
-    static bool    buttons_up_pending = false;
-
-
-    if      (KEYS() & J_LEFT)  { if (cursor_x > IMG_X_START) cursor_x--; }
-    else if (KEYS() & J_RIGHT) { if (cursor_x < IMG_X_END)   cursor_x++; }
-
-    if      (KEYS() & J_UP)   { if (cursor_y > IMG_Y_START) cursor_y--; }
-    else if (KEYS() & J_DOWN) { if (cursor_y < IMG_Y_END)   cursor_y++; }
-
-    // Move the cursor
-    move_sprite(SPRITE_MOUSE_CURSOR, cursor_x + DEVICE_SPRITE_PX_OFFSET_X, cursor_y + DEVICE_SPRITE_PX_OFFSET_Y);
+    // if (KEY_PRESSED(J_SELECT)) {
+    //     test_load_save();
+    //     return;
+    // }
+    if (KEY_TICKED(J_SELECT)) ui_cycle_cursor_speed();
 
     switch (KEYS() & (J_A | J_B)) {
         case (J_A | J_B):
@@ -187,31 +102,31 @@ void draw_update(void) BANKED {
             box(IMG_X_START, IMG_Y_START, IMG_X_END, IMG_Y_END, M_FILL);
             // // For pixel drawing
             color(BLACK, WHITE, SOLID);
-            last_cursor_x = last_cursor_y = CURSOR_POS_UNSET;
+            app_state.cursor_8u_last_x = app_state.cursor_8u_last_y = CURSOR_POS_UNSET_8U;
 
             // Wait for both buttons up before drawing again to avoid leaving a dot after clearing screen
-            buttons_up_pending = true;
+            app_state.buttons_up_pending = true;
             break;
 
-        case J_A: if (!buttons_up_pending) {
-                        plot_point(cursor_x, cursor_y);
-                        last_cursor_x = cursor_x;
-                        last_cursor_y = cursor_y;
+        case J_A: if (!app_state.buttons_up_pending) {
+                        plot_point(cursor_8u_x, cursor_8u_y);
+                        app_state.cursor_8u_last_x = cursor_8u_x;
+                        app_state.cursor_8u_last_y = cursor_8u_y;
                     }
             break;
 
-        case J_B: if (!buttons_up_pending) {
-                        if (last_cursor_x != CURSOR_POS_UNSET) {
-                            line(last_cursor_x, last_cursor_y, cursor_x, cursor_y);
-                        }
-                        last_cursor_x = cursor_x;
-                        last_cursor_y = cursor_y;
+        case J_B: if (!app_state.buttons_up_pending) {
+                        // if (app_state.cursor_8u_last_x != CURSOR_POS_UNSET_8U) {
+                        //     line(app_state.cursor_8u_last_x, app_state.cursor_8u_last_y, cursor_8u_x, cursor_8u_y);
+                        // }
+                        app_state.cursor_8u_last_x = cursor_8u_x;
+                        app_state.cursor_8u_last_y = cursor_8u_y;
                     }
             break;
 
 
         default: // no buttons pressed
-            buttons_up_pending = false;
+            app_state.buttons_up_pending = false;
             break;
     }
 }
