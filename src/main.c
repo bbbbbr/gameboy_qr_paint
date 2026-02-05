@@ -8,28 +8,7 @@
 #include "draw.h"
 #include "ui_main.h"
 
-const palette_color_t QR_PAL_CGB[]  = {RGB(31, 31, 31), RGB(0,0,0),    RGB(0,0,0),    RGB(0,0,0)};
-const palette_color_t DEF_PAL_CGB[] = {RGB(31, 31, 31), RGB(21,21,21),   RGB(10,10,10),   RGB(0,0,0)};
-
-const uint8_t QR_PAL_DMG  = DMG_PALETTE(DMG_WHITE, DMG_BLACK,     DMG_BLACK,     DMG_BLACK);
-const uint8_t DEF_PAL_DMG = DMG_PALETTE(DMG_WHITE, DMG_LITE_GRAY, DMG_DARK_GRAY, DMG_BLACK);
-
 void make_and_show_qrcode(void);
-void set_pal_qrmode(void);
-void set_pal_normal(void);
-
-
-void set_pal_qrmode(void) {
-    if (_cpu == CGB_TYPE)  set_bkg_palette(0u, 1u, QR_PAL_CGB);
-    else                   BGP_REG = QR_PAL_DMG;
-}
-
-
-void set_pal_normal(void) {
-    if (_cpu == CGB_TYPE)  set_bkg_palette(0u, 1u, DEF_PAL_CGB);
-    else                   BGP_REG = DEF_PAL_DMG;
-}
-
 
 void make_and_show_qrcode(void) {
 
@@ -60,7 +39,8 @@ void main(void)
 
     if (_cpu == CGB_TYPE) {
         cpu_fast();
-        set_default_palette();
+        set_pal_normal();
+        set_pal_spr_draw();
     }
 
     UPDATE_KEYS();

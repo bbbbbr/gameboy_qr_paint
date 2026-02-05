@@ -131,4 +131,12 @@ extern app_state_t app_state;
 
 void app_state_reset(void) BANKED;
 
+void set_pal_qrmode(void) BANKED;
+void set_pal_normal(void) BANKED;
+
+void set_pal_spr_draw(void) BANKED;
+void set_pal_spr_menu(void) BANKED;
+
+
+
 #endif // COMMON_H

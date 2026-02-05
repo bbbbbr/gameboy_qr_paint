@@ -35,3 +35,39 @@ void app_state_reset(void) BANKED {
     app_state.cursor_speed_mode = CURSOR_SPEED_MODE_DEFAULT;
     app_state.cursor_teleport_zone = CURSOR_TELEPORT_DEFAULT;
 }
+
+
+const palette_color_t QR_PAL_CGB[]  = {RGB(31, 31, 31), RGB(0,0,0),    RGB(0,0,0),    RGB(0,0,0)};
+const palette_color_t DEF_PAL_CGB[] = {RGB(31, 31, 31), RGB(21,21,21),   RGB(10,10,10),   RGB(0,0,0)};
+
+const palette_color_t SPR_PAL_MENU_CGB[] = {RGB(31, 31, 31), RGB(31, 31, 31), RGB(21,21,21),   RGB(0,0,0)};  // White, White, LG, Black
+const palette_color_t SPR_PAL_DRAW_CGB[] = {RGB(31, 31, 31), RGB(21,21,21),   RGB(10,10,10),   RGB(0,0,0)};
+
+const uint8_t QR_PAL_DMG  = DMG_PALETTE(DMG_WHITE, DMG_BLACK,     DMG_BLACK,     DMG_BLACK);
+const uint8_t DEF_PAL_DMG = DMG_PALETTE(DMG_WHITE, DMG_LITE_GRAY, DMG_DARK_GRAY, DMG_BLACK);
+
+const uint8_t SPR_PAL_MENU_DMG = DMG_PALETTE(DMG_WHITE, DMG_WHITE, DMG_LITE_GRAY, DMG_BLACK);
+const uint8_t SPR_PAL_DRAW_DMG = DMG_PALETTE(DMG_WHITE, DMG_LITE_GRAY, DMG_DARK_GRAY, DMG_BLACK);
+
+void set_pal_qrmode(void) BANKED {
+    if (_cpu == CGB_TYPE)  set_bkg_palette(0u, 1u, QR_PAL_CGB);
+    else                   BGP_REG = QR_PAL_DMG;
+}
+
+
+void set_pal_normal(void) BANKED {
+    if (_cpu == CGB_TYPE)  set_bkg_palette(0u, 1u, DEF_PAL_CGB);
+    else                   BGP_REG = DEF_PAL_DMG;
+}
+
+
+void set_pal_spr_draw(void) BANKED {
+    if (_cpu == CGB_TYPE)  set_sprite_palette(0u, 1u, SPR_PAL_DRAW_CGB);
+    else                   OBP1_REG = SPR_PAL_DRAW_DMG;
+}
+
+void set_pal_spr_menu(void) BANKED {
+    if (_cpu == CGB_TYPE)  set_sprite_palette(0u, 1u, SPR_PAL_MENU_CGB);
+    else                   OBP1_REG = SPR_PAL_MENU_DMG;
+}
+

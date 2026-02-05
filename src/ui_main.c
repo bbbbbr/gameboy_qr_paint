@@ -133,12 +133,14 @@ void ui_cycle_cursor_teleport(void) BANKED {
         case CURSOR_TELEPORT_DRAWING:
             app_state.cursor_x = app_state.cursor_draw_saved_x;
             app_state.cursor_y = app_state.cursor_draw_saved_y;
+            set_pal_spr_draw();
             break;
 
     // TODO: UI: Cursor: Maybe teleport to menus should always snap to center of menu area instead of remembering, it might be more annoying in practice
         case CURSOR_TELEPORT_MENUS:
             app_state.cursor_x = app_state.cursor_menus_saved_x;
             app_state.cursor_y = app_state.cursor_menus_saved_y;
+            set_pal_spr_menu();
             break;
     }
 }
@@ -178,6 +180,7 @@ static inline void ui_cursor_teleport_update(bool cursor_in_drawing, uint16_t cu
         app_state.cursor_draw_saved_x = cursor_last_x;
         app_state.cursor_draw_saved_y = cursor_last_y;
         app_state.cursor_teleport_zone = CURSOR_TELEPORT_MENUS;
+        set_pal_spr_menu();
     }
     else if ((cursor_in_drawing == true) && (app_state.cursor_teleport_zone == CURSOR_TELEPORT_MENUS)) {
         // Save position in drawing and change state to menu area
@@ -185,8 +188,10 @@ static inline void ui_cursor_teleport_update(bool cursor_in_drawing, uint16_t cu
         app_state.cursor_menus_saved_x = cursor_last_x;
         app_state.cursor_menus_saved_y = cursor_last_y;
         app_state.cursor_teleport_zone = CURSOR_TELEPORT_DRAWING;
+        set_pal_spr_draw();
     }
 
+    // TODO: J_SELECT instead?
     // Check for request to teleport between menus/drawing
     if (KEY_TICKED(J_B)) ui_cycle_cursor_teleport();
 }
