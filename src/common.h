@@ -89,10 +89,9 @@ enum {
     CURSOR_TELEPORT_MIN,
 
     CURSOR_TELEPORT_DRAWING = CURSOR_TELEPORT_MIN,
-    CURSOR_TELEPORT_LEFT_MENU,
-    CURSOR_TELEPORT_RIGHT_MENU,
+    CURSOR_TELEPORT_MENUS,
+    CURSOR_TELEPORT_MAX = CURSOR_TELEPORT_MENUS,
 
-    CURSOR_TELEPORT_MAX = CURSOR_TELEPORT_RIGHT_MENU,    
     CURSOR_TELEPORT_DEFAULT = CURSOR_TELEPORT_DRAWING,
 };
 
@@ -100,28 +99,30 @@ enum {
 
 typedef struct app_state_t {
 
+    // == Saves ==
     uint8_t  save_slot_current;
 
+    // == Cursor ==
     uint16_t cursor_x;
     uint16_t cursor_y;
 
     uint8_t cursor_8u_cache_x;
     uint8_t cursor_8u_cache_y;
 
-    uint8_t cursor_8u_last_x;
-    uint8_t cursor_8u_last_y;
-
     uint16_t cursor_draw_saved_x;
     uint16_t cursor_draw_saved_y;
-    uint16_t cursor_left_menu_saved_x;
-    uint16_t cursor_left_menu_saved_y;
-    uint16_t cursor_right_menu_saved_x;
-    uint16_t cursor_right_menu_saved_y;
-
-    bool     buttons_up_pending; // Helps mask some button presses
+    uint16_t cursor_menus_saved_x;
+    uint16_t cursor_menus_saved_y;
 
     uint8_t  cursor_speed_mode;
     uint8_t  cursor_teleport_zone;
+
+    // == Drawing ==
+    uint8_t draw_cursor_8u_last_x;  // TODO: This is a drawing var, not a cursor var
+    uint8_t draw_cursor_8u_last_y;
+
+    bool     buttons_up_pending; // Helps mask some button presses
+
 
 } app_state_t;
 

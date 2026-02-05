@@ -3,6 +3,8 @@
 
 #include <gb/drawing.h>
 
+#include <gbdk/emu_debug.h>  // Sensitive to duplicated line position across source files
+
 #include "common.h"
 #include "input.h"
 
@@ -35,7 +37,8 @@ static const unsigned char mouse_cursors[] = {
 static void ui_cursor_teleport_save_zone(uint8_t teleport_zone_to_save);
 static inline void ui_cursor_update(uint8_t cursor_8u_x, uint8_t cursor_8u_y);
 static inline bool ui_check_cursor_in_draw_area(void);
-static void ui_process_input(uint8_t cursor_in_drawing);
+static inline void ui_cursor_teleport_update(bool cursor_in_drawing, uint16_t cursor_last_x, uint16_t cursor_last_y);
+static void ui_process_input(bool cursor_in_drawing);
 static void ui_redraw_workarea(void);
 
 
@@ -106,19 +109,16 @@ static void ui_cursor_teleport_save_zone(uint8_t teleport_zone_to_save) {
             app_state.cursor_draw_saved_y = app_state.cursor_y;
             break;
 
-        case CURSOR_TELEPORT_LEFT_MENU:
-            app_state.cursor_left_menu_saved_x = app_state.cursor_x;
-            app_state.cursor_left_menu_saved_y = app_state.cursor_y;
-            break;
-
-        case CURSOR_TELEPORT_RIGHT_MENU:
-            app_state.cursor_right_menu_saved_x = app_state.cursor_x;
-            app_state.cursor_right_menu_saved_y = app_state.cursor_y;
+        case CURSOR_TELEPORT_MENUS:
+            app_state.cursor_menus_saved_x = app_state.cursor_x;
+            app_state.cursor_menus_saved_y = app_state.cursor_y;
             break;
     }
 }    
 
 void ui_cycle_cursor_teleport(void) BANKED {
+
+    // Note: Three teleport zones feels too complicated right now, reducing down to two
 
     // Save cursor position of current state
     ui_cursor_teleport_save_zone(app_state.cursor_teleport_zone);
@@ -135,14 +135,10 @@ void ui_cycle_cursor_teleport(void) BANKED {
             app_state.cursor_y = app_state.cursor_draw_saved_y;
             break;
 
-        case CURSOR_TELEPORT_LEFT_MENU:
-            app_state.cursor_x = app_state.cursor_left_menu_saved_x;
-            app_state.cursor_y = app_state.cursor_left_menu_saved_y;
-            break;
-
-        case CURSOR_TELEPORT_RIGHT_MENU:
-            app_state.cursor_x = app_state.cursor_right_menu_saved_x;
-            app_state.cursor_y = app_state.cursor_right_menu_saved_y;
+    // TODO: UI: Cursor: Maybe teleport to menus should always snap to center of menu area instead of remembering, it might be more annoying in practice
+        case CURSOR_TELEPORT_MENUS:
+            app_state.cursor_x = app_state.cursor_menus_saved_x;
+            app_state.cursor_y = app_state.cursor_menus_saved_y;
             break;
     }
 }
@@ -173,19 +169,38 @@ static inline bool ui_check_cursor_in_draw_area(void) {
 }
 
 
-static void ui_process_input(uint8_t cursor_in_drawing) {
+static inline void ui_cursor_teleport_update(bool cursor_in_drawing, uint16_t cursor_last_x, uint16_t cursor_last_y) {
 
-    // TODO: THIS COULD BE SIMPLIFIED A LOT OF THERE WERE ONLY 2 TELEPORT ZONES (MENU / DRAWING)
-    // Three teleport zones feels too complicated right now
-
-    // // Check if cursor needs an auto-teleport update due to manually navigating between areas
-    // if (app_state.cursor_teleport_zone == CURSOR_TELEPORT_DRAWING) && (cursor_in_drawing == false)
-    //     ui_cursor_teleport_save_zone(CURSOR_TELEPORT_DRAWING);
-    //     app_state.cursor_teleport_zone = ... LEFT OR RIGHT MENU?
+    // Check if cursor needs an auto-teleport update due to manually navigating between areas
+    if ((cursor_in_drawing == false) && (app_state.cursor_teleport_zone == CURSOR_TELEPORT_DRAWING)) {
+        // Save position in drawing and change state to menu area
+        // Use ..last.. since the position to save is where it was BEFORE it changed zones
+        app_state.cursor_draw_saved_x = cursor_last_x;
+        app_state.cursor_draw_saved_y = cursor_last_y;
+        app_state.cursor_teleport_zone = CURSOR_TELEPORT_MENUS;
+    }
+    else if ((cursor_in_drawing == true) && (app_state.cursor_teleport_zone == CURSOR_TELEPORT_MENUS)) {
+        // Save position in drawing and change state to menu area
+        // Use ..last.. since the position to save is where it was BEFORE it changed zones
+        app_state.cursor_menus_saved_x = cursor_last_x;
+        app_state.cursor_menus_saved_y = cursor_last_y;
+        app_state.cursor_teleport_zone = CURSOR_TELEPORT_DRAWING;
+    }
 
     // Check for request to teleport between menus/drawing
     if (KEY_TICKED(J_B)) ui_cycle_cursor_teleport();
+}
 
+
+static void ui_process_input(bool cursor_in_drawing) {
+
+    static uint16_t cursor_last_x, cursor_last_y;
+
+    // First check for and apply any cursor teleport actions/updates
+    ui_cursor_teleport_update(cursor_in_drawing, cursor_last_x, cursor_last_y);
+
+    cursor_last_x = app_state.cursor_x;
+    cursor_last_y = app_state.cursor_y;
 
     if (!cursor_in_drawing) {
         // For the main UI area there is only one speed of cursor movement (fast)

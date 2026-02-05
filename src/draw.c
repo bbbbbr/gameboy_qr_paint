@@ -102,7 +102,7 @@ void draw_update(uint8_t cursor_8u_x, uint8_t cursor_8u_y) BANKED {
             box(IMG_X_START, IMG_Y_START, IMG_X_END, IMG_Y_END, M_FILL);
             // // For pixel drawing
             color(BLACK, WHITE, SOLID);
-            app_state.cursor_8u_last_x = app_state.cursor_8u_last_y = CURSOR_POS_UNSET_8U;
+            app_state.draw_cursor_8u_last_x = app_state.draw_cursor_8u_last_y = CURSOR_POS_UNSET_8U;
 
             // Wait for both buttons up before drawing again to avoid leaving a dot after clearing screen
             app_state.buttons_up_pending = true;
@@ -110,17 +110,17 @@ void draw_update(uint8_t cursor_8u_x, uint8_t cursor_8u_y) BANKED {
 
         case J_A: if (!app_state.buttons_up_pending) {
                         plot_point(cursor_8u_x, cursor_8u_y);
-                        app_state.cursor_8u_last_x = cursor_8u_x;
-                        app_state.cursor_8u_last_y = cursor_8u_y;
+                        app_state.draw_cursor_8u_last_x = cursor_8u_x;
+                        app_state.draw_cursor_8u_last_y = cursor_8u_y;
                     }
             break;
 
         case J_B: if (!app_state.buttons_up_pending) {
-                        // if (app_state.cursor_8u_last_x != CURSOR_POS_UNSET_8U) {
-                        //     line(app_state.cursor_8u_last_x, app_state.cursor_8u_last_y, cursor_8u_x, cursor_8u_y);
+                        // if (app_state.draw_cursor_8u_last_x != CURSOR_POS_UNSET_8U) {
+                        //     line(app_state.draw_cursor_8u_last_x, app_state.draw_cursor_8u_last_y, cursor_8u_x, cursor_8u_y);
                         // }
-                        app_state.cursor_8u_last_x = cursor_8u_x;
-                        app_state.cursor_8u_last_y = cursor_8u_y;
+                        app_state.draw_cursor_8u_last_x = cursor_8u_x;
+                        app_state.draw_cursor_8u_last_y = cursor_8u_y;
                     }
             break;
 
