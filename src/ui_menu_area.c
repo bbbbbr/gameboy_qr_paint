@@ -70,9 +70,15 @@ void ui_handle_menu_area(uint8_t cursor_8u_x, uint8_t cursor_8u_y) BANKED {
         ui_menu_tools(cursor_8u_y);
     }
     // File Menu
-    if ((cursor_8u_x >= FILE_MENU_X_START) && (cursor_8u_x < FILE_MENU_X_END) &&
-        (cursor_8u_y >= FILE_MENU_Y_START) && (cursor_8u_y < FILE_MENU_Y_END)) {
+    else if ((cursor_8u_x >= FILE_MENU_X_START) && (cursor_8u_x < FILE_MENU_X_END) &&
+             (cursor_8u_y >= FILE_MENU_Y_START) && (cursor_8u_y < FILE_MENU_Y_END)) {
         ui_menu_file(cursor_8u_y);
+    }
+    else if ((cursor_8u_x >= CLEAR_BUTTON_X_START) && (cursor_8u_x < CLEAR_BUTTON_X_END) &&
+             (cursor_8u_y >= CLEAR_BUTTON_Y_START) && (cursor_8u_y < CLEAR_BUTTON_Y_END)) {
+        if (KEY_TICKED(UI_ACTION_BUTTON)) {
+            drawing_clear();
+        }
     }
 }
 
@@ -86,7 +92,7 @@ static void ui_menu_tools(uint8_t cursor_8u_y) {
     // TODO: optional: animate button press somehow
 
     // A button used to press buttons
-    if (KEY_TICKED(J_A)) {
+    if (KEY_TICKED(UI_ACTION_BUTTON)) {
         // Tool icons are uniform in size, so divide position by size to get it
         uint8_t new_tool = (cursor_8u_y - TOOLS_MENU_Y_START) / TOOLS_MENU_ITEM_HEIGHT;
 
@@ -121,7 +127,7 @@ static void ui_menu_file(uint8_t cursor_8u_y) {
     // TODO: optional: animate button press somehow
 
     // A button used to press buttons
-    if (KEY_TICKED(J_A)) {
+    if (KEY_TICKED(UI_ACTION_BUTTON)) {
         // Tool icons are uniform in size, so divide position by size to get it
         uint8_t file_menu_item = (cursor_8u_y - FILE_MENU_Y_START) / FILE_MENU_ITEM_HEIGHT;
 

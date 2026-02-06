@@ -5,6 +5,9 @@
 
 #define ARRAY_LEN(A)  (sizeof(A) / sizeof(A[0]))
 
+
+#define UI_ACTION_BUTTON            (J_A)
+
 #define ALL_MENUS_BG_COLOR          (LTGREY)
 
 #define TOOLS_MENU_BG_COLOR         (ALL_MENUS_BG_COLOR)
@@ -163,9 +166,6 @@ typedef struct app_state_t {
 
     uint8_t draw_cursor_8u_last_x;  // TODO: This is a drawing var, not a cursor var
     uint8_t draw_cursor_8u_last_y;
-
-    bool     buttons_up_pending; // Helps mask some button presses
-
 
 } app_state_t;
 

@@ -34,8 +34,6 @@ void app_state_reset(void) BANKED {
     app_state.draw_cursor_8u_last_x = CURSOR_POS_UNSET_8U;
     app_state.draw_cursor_8u_last_y = CURSOR_POS_UNSET_8U;
 
-    app_state.buttons_up_pending = false;
-
     app_state.drawing_tool = DRAW_TOOL_DEFAULT;
 
 }

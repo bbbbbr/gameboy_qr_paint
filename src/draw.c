@@ -78,6 +78,14 @@ void drawing_restore_default_colors(void) BANKED {
 }
 
 
+void drawing_clear(void) BANKED {
+
+    // Fill active image area in white
+    color(WHITE, WHITE, SOLID);
+    box(IMG_X_START, IMG_Y_START, IMG_X_END, IMG_Y_END, M_FILL);
+
+    drawing_restore_default_colors();
+}
 
 void draw_init(void) BANKED {
 
@@ -108,39 +116,24 @@ void draw_update(uint8_t cursor_8u_x, uint8_t cursor_8u_y) BANKED {
     // }        
 
     switch (KEYS() & (J_A | J_B)) {
-        case (J_A | J_B):
+        // case (J_A | J_B):
             // Clear the screen and reset some things
-
-            // Fill active image area in white
-            color(WHITE, WHITE, SOLID);
-            box(IMG_X_START, IMG_Y_START, IMG_X_END, IMG_Y_END, M_FILL);
-            // // For pixel drawing
-            color(BLACK, WHITE, SOLID);
-            app_state.draw_cursor_8u_last_x = app_state.draw_cursor_8u_last_y = CURSOR_POS_UNSET_8U;
-
-            // Wait for both buttons up before drawing again to avoid leaving a dot after clearing screen
-            app_state.buttons_up_pending = true;
+        case J_A: plot_point(cursor_8u_x, cursor_8u_y);
+                  app_state.draw_cursor_8u_last_x = cursor_8u_x;
+                  app_state.draw_cursor_8u_last_y = cursor_8u_y;
             break;
 
-        case J_A: if (!app_state.buttons_up_pending) {
-                        plot_point(cursor_8u_x, cursor_8u_y);
-                        app_state.draw_cursor_8u_last_x = cursor_8u_x;
-                        app_state.draw_cursor_8u_last_y = cursor_8u_y;
-                    }
-            break;
-
-        case J_B: if (!app_state.buttons_up_pending) {
-                        // if (app_state.draw_cursor_8u_last_x != CURSOR_POS_UNSET_8U) {
-                        //     line(app_state.draw_cursor_8u_last_x, app_state.draw_cursor_8u_last_y, cursor_8u_x, cursor_8u_y);
-                        // }
-                        app_state.draw_cursor_8u_last_x = cursor_8u_x;
-                        app_state.draw_cursor_8u_last_y = cursor_8u_y;
-                    }
+        case J_B:
+                    // // if (app_state.draw_cursor_8u_last_x != CURSOR_POS_UNSET_8U) {
+                    // //     line(app_state.draw_cursor_8u_last_x, app_state.draw_cursor_8u_last_y, cursor_8u_x, cursor_8u_y);
+                    // // }
+                    // app_state.draw_cursor_8u_last_x = cursor_8u_x;
+                    // app_state.draw_cursor_8u_last_y = cursor_8u_y;
             break;
 
 
         default: // no buttons pressed
-            app_state.buttons_up_pending = false;
+            // app_state.buttons_up_pending = false;
             break;
     }
 }
