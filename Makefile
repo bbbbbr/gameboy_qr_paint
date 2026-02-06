@@ -7,7 +7,7 @@ endif
 LCC = $(GBDK_HOME)bin/lcc
 PNG2ASSET = $(GBDK_HOME)bin/png2asset
 
-VERSION=0.8.0
+VERSION=0.8.5
 
 # Set platforms to build here, spaced separated. (These are in the separate Makefile.targets)
 # They can also be built/cleaned individually: "make gg" and "make gg-clean"
@@ -56,7 +56,7 @@ ifdef GBDK_DEBUG
 endif
 
 # You can set the name of the ROM file here
-PROJECTNAME = qrcode_png
+PROJECTNAME = qr_paint
 
 
 PACKAGE_DIR = "../build_archive/$(VERSION)"
