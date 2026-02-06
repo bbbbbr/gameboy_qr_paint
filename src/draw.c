@@ -17,10 +17,12 @@
 #define DRAWING_SAVE_SLOT_SIZE    (IMG_WIDTH_TILES * IMG_HEIGHT_TILES * TILE_SZ_BYTES)
 #define DRAWING_VRAM_START        (APA_MODE_VRAM_START + (((IMG_TILE_Y_START * DEVICE_SCREEN_WIDTH) + IMG_TILE_X_START) * TILE_SZ_BYTES))
 
+static uint8_t get_radius(uint8_t cursor_8u_x, uint8_t cursor_8u_y);
 
 static void draw_tool_pencil(uint8_t cursor_8u_x, uint8_t cursor_8u_y);
 static void draw_tool_line(uint8_t cursor_8u_x, uint8_t cursor_8u_y);
 static void draw_tool_rect(uint8_t cursor_8u_x, uint8_t cursor_8u_y);
+static void draw_tool_circle(uint8_t cursor_8u_x, uint8_t cursor_8u_y);
 
 static uint8_t tool_start_x, tool_start_y;
 static bool    tool_currently_drawing = false;
@@ -112,7 +114,7 @@ void draw_update(uint8_t cursor_8u_x, uint8_t cursor_8u_y) BANKED {
             break;
         case DRAW_TOOL_RECT:  draw_tool_rect(cursor_8u_x,cursor_8u_y);
             break;
-        case DRAW_TOOL_CIRCLE:
+        case DRAW_TOOL_CIRCLE: draw_tool_circle(cursor_8u_x,cursor_8u_y);
             break;
         case DRAW_TOOL_FLOODFILL:
             break;
@@ -179,11 +181,11 @@ static void draw_tool_line(uint8_t cursor_8u_x, uint8_t cursor_8u_y) {
 
         // Un-draw the line from the last frame (XOR)
         // But only if the cursor moved, so that it remains visible otherwise
-        bool new_line_position = false;
+        bool new_draw_position = false;
         if ((cursor_8u_x != app_state.draw_cursor_8u_last_x) || (cursor_8u_y !=app_state.draw_cursor_8u_last_y)) {
             color(BLACK,WHITE,XOR);
             line(tool_start_x, tool_start_y, app_state.draw_cursor_8u_last_x, app_state.draw_cursor_8u_last_y);
-            new_line_position = true;
+            new_draw_position = true;
         }
 
         // If finalizing the line is requested, draw it normally
@@ -208,14 +210,14 @@ static void draw_tool_line(uint8_t cursor_8u_x, uint8_t cursor_8u_y) {
                 app_state.draw_tool_using_b_button_action = false;
 
                 // If it's the same position as before then need to undraw the line to cancel
-                if (!new_line_position) {
+                if (!new_draw_position) {
                     color(BLACK,WHITE,XOR);
                     line(tool_start_x, tool_start_y, app_state.draw_cursor_8u_last_x, app_state.draw_cursor_8u_last_y);
                 }
             }
             else {
                 // Otherwise, if moved, update the line preview to the new position
-                if (new_line_position) {
+                if (new_draw_position) {
                     // Again, XOR draw so it can be un-drawn later
                     color(BLACK,WHITE,XOR);
                     line(tool_start_x, tool_start_y, cursor_8u_x, cursor_8u_y);
@@ -250,11 +252,11 @@ static void draw_tool_rect(uint8_t cursor_8u_x, uint8_t cursor_8u_y) {
 
         // Un-draw the rect from the last frame (XOR)
         // But only if the cursor moved, so that it remains visible otherwise
-        bool new_line_position = false;
+        bool new_draw_position = false;
         if ((cursor_8u_x != app_state.draw_cursor_8u_last_x) || (cursor_8u_y !=app_state.draw_cursor_8u_last_y)) {
             color(BLACK,WHITE,XOR);
             box(tool_start_x, tool_start_y, app_state.draw_cursor_8u_last_x, app_state.draw_cursor_8u_last_y, tool_fillstyle);
-            new_line_position = true;
+            new_draw_position = true;
         }
 
         // If finalizing the rect is requested, draw it normally
@@ -267,13 +269,132 @@ static void draw_tool_rect(uint8_t cursor_8u_x, uint8_t cursor_8u_y) {
             tool_currently_drawing = false;
         }
         else {
-            // Otherwise the rect is still being actively drawn
+            // Otherwise still being actively drawn
 
-            // If moved, update the line preview to the new position
-            if (new_line_position) {
-                // Again, XOR draw so it can be un-drawn later
+            // B Button cancels drawing the current one
+            if (KEY_TICKED(DRAW_CANCEL_BUTTON)) {
+
+                // Cancel all drawing
+                tool_currently_drawing = false;
+                app_state.draw_tool_using_b_button_action = false;
+
+                // If it's the same position as before then need to undraw to cancel
+                if (!new_draw_position) {
+                    color(BLACK,WHITE,XOR);
+                    box(tool_start_x, tool_start_y, app_state.draw_cursor_8u_last_x, app_state.draw_cursor_8u_last_y, tool_fillstyle);
+                }
+            }
+            else {
+                // If moved, update the preview to the new position
+                if (new_draw_position) {
+                    // Again, XOR draw so it can be un-drawn later
+                    color(BLACK,WHITE,XOR);
+                    box(tool_start_x, tool_start_y, cursor_8u_x, cursor_8u_y, tool_fillstyle);
+                }
+            }
+        }
+
+        drawing_restore_default_colors();
+    }
+}
+
+
+// TODO: could do a 96x96 LUT to get actual line distance
+// Quick but inaccurate line length
+static uint8_t get_radius(uint8_t cursor_8u_x, uint8_t cursor_8u_y) {
+    uint8_t x_dist, y_dist;
+    if (tool_start_x > cursor_8u_x) x_dist = (tool_start_x - cursor_8u_x);
+    else                            x_dist = (cursor_8u_x - tool_start_x);
+
+    if (tool_start_y > cursor_8u_y) y_dist = (tool_start_y - cursor_8u_y);
+    else                            y_dist = (cursor_8u_y - tool_start_y);
+
+    // Return whichever is longer
+    uint8_t result = (x_dist > y_dist) ? x_dist : y_dist;
+    // Circle drawing doesn't handle radius of zero well
+    if (result == 0) result++;
+
+    // Clamp distance to not exceed drawing area
+    // There is gating at the start of line drawing to make sure that this shouldn't
+    // result in a radius 0, which would crash the circle drawing
+    if (result > (tool_start_x - IMG_X_START)) result = (tool_start_x - IMG_X_START);
+    if (result > (IMG_X_END - tool_start_x))   result = (IMG_X_END - tool_start_x);
+    if (result > (tool_start_y - IMG_Y_START)) result = (tool_start_y - IMG_Y_START);
+    if (result > (IMG_Y_END - tool_start_y))   result = (IMG_Y_END - tool_start_y);
+
+    // EMU_printf("xd=%hu, yd=%hu, len=%hu\n", (uint8_t)x_dist, (uint8_t)y_dist, (uint8_t)result);
+    return result;
+}
+
+
+static void draw_tool_circle(uint8_t cursor_8u_x, uint8_t cursor_8u_y) {
+
+    if (tool_currently_drawing == false) {
+
+        // Start drawing
+        if (KEY_TICKED(DRAW_MAIN_BUTTON)) {
+
+            // Block starting a circle on any edge of the drawing area
+            // since radius of 1+ would spill into the UI area
+            if ((cursor_8u_x != IMG_X_START) && (cursor_8u_x != IMG_X_END) &&
+                (cursor_8u_y != IMG_Y_START) && (cursor_8u_y != IMG_Y_END)) {
+
+                tool_start_x = cursor_8u_x;
+                tool_start_y = cursor_8u_y;
+                // Draw the first XOR style so it can be undrawn
                 color(BLACK,WHITE,XOR);
-                box(tool_start_x, tool_start_y, cursor_8u_x, cursor_8u_y, tool_fillstyle);
+                circle(tool_start_x, tool_start_y, get_radius(cursor_8u_x, cursor_8u_y), tool_fillstyle);
+
+                // Set starting point
+                app_state.draw_tool_using_b_button_action = true;
+                tool_currently_drawing = true;
+            }
+        }
+
+    } else {
+        // Drawing is active, currently previewing position
+
+        // Un-draw from the last frame (XOR)
+        // But only if the cursor moved, so that it remains visible otherwise
+        bool new_draw_position = false;
+        if ((cursor_8u_x != app_state.draw_cursor_8u_last_x) || (cursor_8u_y !=app_state.draw_cursor_8u_last_y)) {
+            color(BLACK,WHITE,XOR);
+            circle(tool_start_x, tool_start_y, get_radius(app_state.draw_cursor_8u_last_x, app_state.draw_cursor_8u_last_y), tool_fillstyle);
+            new_draw_position = true;
+        }
+
+        // If finalizing is requested, draw it normally
+        if (KEY_TICKED(DRAW_MAIN_BUTTON)) {
+            // Finalize
+            drawing_restore_default_colors();
+            circle(tool_start_x, tool_start_y, get_radius(cursor_8u_x, cursor_8u_y), tool_fillstyle);
+
+            app_state.draw_tool_using_b_button_action = false;
+            tool_currently_drawing = false;
+        }
+        else {
+            // Otherwise still being actively drawn
+
+            // B Button cancels drawing the current one
+            if (KEY_TICKED(DRAW_CANCEL_BUTTON)) {
+
+                // Cancel all drawing
+                tool_currently_drawing = false;
+                app_state.draw_tool_using_b_button_action = false;
+
+                // If it's the same position as before then need to undraw to cancel
+                if (!new_draw_position) {
+                    color(BLACK,WHITE,XOR);
+                    circle(tool_start_x, tool_start_y, get_radius(app_state.draw_cursor_8u_last_x, app_state.draw_cursor_8u_last_y), tool_fillstyle);
+                }
+            }
+            else {
+                // If moved, update the preview to the new position
+                if (new_draw_position) {
+                    // Again, XOR draw so it can be un-drawn later
+                    color(BLACK,WHITE,XOR);
+                    circle(tool_start_x, tool_start_y, get_radius(cursor_8u_x, cursor_8u_y), tool_fillstyle);
+                }
             }
         }
 
