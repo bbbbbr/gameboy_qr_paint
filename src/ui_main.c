@@ -88,6 +88,10 @@ void ui_update(void) BANKED {
 
 
 void ui_redraw_after_qrcode(void) BANKED {
+
+    // Cancel any pending tool use
+    draw_tools_cancel_and_reset();
+
     // Refresh the UI
     ui_redraw_menus_all();
 
@@ -197,7 +201,8 @@ static inline void ui_cursor_teleport_update(bool cursor_in_drawing, uint16_t cu
 
     // TODO: J_SELECT instead?
     // Check for request to teleport between menus/drawing
-    if (KEY_TICKED(J_B)) ui_cycle_cursor_teleport();
+    if (KEY_TICKED(J_B) && (app_state.draw_tool_using_b_button_action == false))
+        ui_cycle_cursor_teleport();
 }
 
 

@@ -7,7 +7,10 @@
 
 
 #define UI_ACTION_BUTTON            (J_A)
+#define UI_CURSOR_TELEPORT_BUTTON   (J_B)
+
 #define DRAW_MAIN_BUTTON            (J_A)
+#define DRAW_CANCEL_BUTTON          (J_B)
 
 #define ALL_MENUS_BG_COLOR          (LTGREY)
 
@@ -94,7 +97,7 @@ enum {
     CURSOR_SPEED_MODE_FAST,
 
     CURSOR_SPEED_MODE_MAX = CURSOR_SPEED_MODE_FAST,    
-    CURSOR_SPEED_MODE_DEFAULT = CURSOR_SPEED_MODE_NORMAL,
+    CURSOR_SPEED_MODE_DEFAULT = CURSOR_SPEED_MODE_FAST,
 };
 
 enum {
@@ -167,6 +170,8 @@ typedef struct app_state_t {
 
     uint8_t draw_cursor_8u_last_x;  // TODO: This is a drawing var, not a cursor var
     uint8_t draw_cursor_8u_last_y;
+
+    bool    draw_tool_using_b_button_action;
 
 } app_state_t;
 

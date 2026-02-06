@@ -93,6 +93,9 @@ static void ui_menu_tools(uint8_t cursor_8u_y) {
 
     // A button used to press buttons
     if (KEY_TICKED(UI_ACTION_BUTTON)) {
+        // Clear any pending tool actions
+        draw_tools_cancel_and_reset();
+
         // Tool icons are uniform in size, so divide position by size to get it
         uint8_t new_tool = (cursor_8u_y - TOOLS_MENU_Y_START) / TOOLS_MENU_ITEM_HEIGHT;
 
