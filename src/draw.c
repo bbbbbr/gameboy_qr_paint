@@ -21,6 +21,8 @@
 static void test_load_save(void);
 
 
+
+// TODO: REORG: split sram load and save out to to new file: file_loadsave.c
 void drawing_save_to_sram(uint8_t sram_bank, uint8_t save_slot) BANKED {
 
     SWITCH_RAM(sram_bank);
@@ -53,20 +55,20 @@ void drawing_restore_from_sram(uint8_t sram_bank, uint8_t save_slot) BANKED {
 }
 
 
-// TODO: For testing, not final Controls UI
-static void test_load_save(void) {
-    
-    switch (GET_KEYS_TICKED(~J_SELECT)) {
-        case J_UP:   if (app_state.save_slot_current > DRAWING_SAVE_SLOT_MIN) app_state.save_slot_current--;
-            break;
-        case J_DOWN: if (app_state.save_slot_current < DRAWING_SAVE_SLOT_MAX) app_state.save_slot_current++;
-            break;
-        case J_A:    drawing_restore_from_sram(SRAM_BANK_DRAWING_SAVES, app_state.save_slot_current);
-            break;
-        case J_B:    drawing_save_to_sram(SRAM_BANK_DRAWING_SAVES, app_state.save_slot_current);
-            break;
-    }
-}
+// // TODO: For testing, not final Controls UI
+// static void test_load_save(void) {
+//    
+//     switch (GET_KEYS_TICKED(~J_SELECT)) {
+//         case J_UP:   if (app_state.save_slot_current > DRAWING_SAVE_SLOT_MIN) app_state.save_slot_current--;
+//             break;
+//         case J_DOWN: if (app_state.save_slot_current < DRAWING_SAVE_SLOT_MAX) app_state.save_slot_current++;
+//             break;
+//         case J_A:    drawing_restore_from_sram(SRAM_BANK_DRAWING_SAVES, app_state.save_slot_current);
+//             break;
+//         case J_B:    drawing_save_to_sram(SRAM_BANK_DRAWING_SAVES, app_state.save_slot_current);
+//             break;
+//     }
+// }
 
 
 // Draws the paint working area
@@ -87,11 +89,23 @@ void draw_init(void) BANKED {
 // Expects UPDATE_KEYS() to have been called before each invocation
 void draw_update(uint8_t cursor_8u_x, uint8_t cursor_8u_y) BANKED {
 
-    // if (KEY_PRESSED(J_SELECT)) {
-    //     test_load_save();
-    //     return;
-    // }
     if (KEY_TICKED(J_SELECT)) ui_cycle_cursor_speed();
+
+    // TODO: handle tool types
+    // switch (app_state.drawing_tool) {
+    //     case DRAW_TOOL_PENCIL:
+    //         break;
+    //     case DRAW_TOOL_LINE:
+    //         break;
+    //     case DRAW_TOOL_ERASER:
+    //         break;
+    //     case DRAW_TOOL_RECT:
+    //         break;
+    //     case DRAW_TOOL_CIRCLE:
+    //         break;
+    //     case DRAW_TOOL_FLOODFILL:
+    //         break;
+    // }        
 
     switch (KEYS() & (J_A | J_B)) {
         case (J_A | J_B):

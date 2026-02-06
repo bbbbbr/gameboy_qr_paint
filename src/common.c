@@ -19,8 +19,9 @@ void app_state_reset(void) BANKED {
     app_state.cursor_8u_cache_x = CURSOR_TO_8U_X();
     app_state.cursor_8u_cache_y = CURSOR_TO_8U_Y();
 
-    app_state.draw_cursor_8u_last_x = CURSOR_POS_UNSET_8U;
-    app_state.draw_cursor_8u_last_y = CURSOR_POS_UNSET_8U;
+    app_state.cursor_speed_mode = CURSOR_SPEED_MODE_DEFAULT;
+    app_state.cursor_teleport_zone = CURSOR_TELEPORT_DEFAULT;
+
 
     // Cursor UI teleport defaults
     app_state.cursor_draw_saved_x = app_state.cursor_x;
@@ -29,11 +30,14 @@ void app_state_reset(void) BANKED {
     app_state.cursor_menus_saved_x = CURSOR_8U_TO_16U(DEVICE_SCREEN_PX_WIDTH / 10);
     app_state.cursor_menus_saved_y = CURSOR_8U_TO_16U(DEVICE_SCREEN_PX_HEIGHT / 2);
     
+    // Drawing / Tools
+    app_state.draw_cursor_8u_last_x = CURSOR_POS_UNSET_8U;
+    app_state.draw_cursor_8u_last_y = CURSOR_POS_UNSET_8U;
 
     app_state.buttons_up_pending = false;
 
-    app_state.cursor_speed_mode = CURSOR_SPEED_MODE_DEFAULT;
-    app_state.cursor_teleport_zone = CURSOR_TELEPORT_DEFAULT;
+    app_state.drawing_tool = DRAW_TOOL_DEFAULT;
+
 }
 
 

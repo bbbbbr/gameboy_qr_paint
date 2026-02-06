@@ -5,6 +5,14 @@
 
 #define ARRAY_LEN(A)  (sizeof(A) / sizeof(A[0]))
 
+#define ALL_MENUS_BG_COLOR          (LTGREY)
+
+#define TOOLS_MENU_BG_COLOR         (ALL_MENUS_BG_COLOR)
+#define TOOLS_MENU_HIGHLIGHT_COLOR  (DKGREY)
+
+#define FILE_MENU_BG_COLOR         (ALL_MENUS_BG_COLOR)
+#define FILE_MENU_HIGHLIGHT_COLOR  (DKGREY)
+
 #define DRAWING_SAVE_SLOT_MIN   0u
 #define DRAWING_SAVE_SLOT_MAX   2u
 #define DRAWING_SAVE_SLOT_COUNT ((DRAW_SAVE_SLOT_MAX - DRAW_SAVE_SLOT_MIN) + 1u)
@@ -96,6 +104,39 @@ enum {
 };
 
 
+enum {
+    DRAW_TOOL_MIN,
+
+    DRAW_TOOL_PENCIL = DRAW_TOOL_MIN,
+    DRAW_TOOL_LINE,
+    DRAW_TOOL_ERASER,
+    DRAW_TOOL_RECT,
+    DRAW_TOOL_CIRCLE,
+    DRAW_TOOL_FLOODFILL,
+    // DRAW_TOOL_PAINT,
+
+    DRAW_TOOL_MAX   = DRAW_TOOL_FLOODFILL,
+    DRAW_TOOL_COUNT = (DRAW_TOOL_MAX + 1u),
+
+    DRAW_TOOL_DEFAULT = DRAW_TOOL_PENCIL,
+};
+
+enum {
+    FILE_MENU_MIN,
+
+    FILE_MENU_LOAD = FILE_MENU_MIN,
+    FILE_MENU_SAVE_SLOT_0,
+    FILE_MENU_SAVE_SLOT_1,
+    FILE_MENU_SAVE_SLOT_2,
+    FILE_MENU_SAVE,
+
+    FILE_MENU_MAX   = FILE_MENU_SAVE,
+    FILE_MENU_COUNT = (FILE_MENU_MAX + 1u),
+
+    FILE_MENU_START_OF_SAVE_SLOTS_OFFSET = (FILE_MENU_SAVE_SLOT_0 - FILE_MENU_LOAD)
+};
+
+
 
 typedef struct app_state_t {
 
@@ -118,6 +159,8 @@ typedef struct app_state_t {
     uint8_t  cursor_teleport_zone;
 
     // == Drawing ==
+    uint8_t drawing_tool;
+
     uint8_t draw_cursor_8u_last_x;  // TODO: This is a drawing var, not a cursor var
     uint8_t draw_cursor_8u_last_y;
 

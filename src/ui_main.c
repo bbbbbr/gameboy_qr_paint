@@ -10,6 +10,7 @@
 
 #include "draw.h"
 #include "ui_main.h"
+#include "ui_menu_area.h"
 
 #include <ui_main_bg.h>      // BG APA style image
 #include <ui_main_bg_cde.h>  // BG APA style image  // CDE alternate theme
@@ -39,10 +40,9 @@ static inline void ui_cursor_update(uint8_t cursor_8u_x, uint8_t cursor_8u_y);
 static inline bool ui_check_cursor_in_draw_area(void);
 static inline void ui_cursor_teleport_update(bool cursor_in_drawing, uint16_t cursor_last_x, uint16_t cursor_last_y);
 static void ui_process_input(bool cursor_in_drawing);
-static void ui_redraw_workarea(void);
 
 
-void ui_init(void)  BANKED {
+void ui_init(void) BANKED {
     HIDE_BKG;
     HIDE_SPRITES;
 
@@ -53,7 +53,7 @@ void ui_init(void)  BANKED {
     // == Enters drawing mode ==
     mode(M_DRAWING);
 
-    ui_redraw_workarea();
+    ui_redraw_menus_all();
 
     DISPLAY_ON;
     SPRITES_8x8;
@@ -75,9 +75,13 @@ void ui_update(void) BANKED {
     ui_cursor_update(cursor_8u_x, cursor_8u_y);
 
     if ( ui_check_cursor_in_draw_area() ) {
-        draw_update(cursor_8u_x, cursor_8u_y);  // TODO: more complex
+        draw_update(cursor_8u_x, cursor_8u_y);
     } else {
-        // ui_handle_interface(cursor_8u_x, cursor_8u_y);
+        ui_handle_menu_area(cursor_8u_x, cursor_8u_y);
+
+        // Restore default draw colors in case they changed during menu updates
+        // TODO: optimize: optionally only do this when changing between menu and drawing area instead of once per frame
+        drawing_restore_default_colors();
     }
 
 }
@@ -85,7 +89,7 @@ void ui_update(void) BANKED {
 
 void ui_redraw_after_qrcode(void) BANKED {
     // Refresh the UI
-    ui_redraw_workarea();
+    ui_redraw_menus_all();
 
     // Then restore the drawing on top of it
     drawing_restore_from_sram(SRAM_BANK_CUR_DRAWING_CACHE, DRAWING_SAVE_SLOT_MIN);
@@ -249,26 +253,3 @@ static void ui_process_input(bool cursor_in_drawing) {
     app_state.cursor_8u_cache_y = CURSOR_TO_8U_Y();
 }
 
-
-// Draws the paint working area
-static void ui_redraw_workarea(void) NONBANKED {
-
-    DISPLAY_OFF;
-
-    uint8_t save_bank = CURRENT_BANK;
-
-    // Alternate CDE theme by holding SELECT
-    if (KEY_PRESSED(J_SELECT)) {
-        SWITCH_ROM(BANK(ui_main_bg_cde));
-        draw_image(ui_main_bg_cde_tiles);
-        SWITCH_ROM(save_bank);
-    } else {
-        SWITCH_ROM(BANK(ui_main_bg));
-        draw_image(ui_main_bg_tiles);
-        SWITCH_ROM(save_bank);
-    }
-
-    DISPLAY_ON;
-
-    // EMU_printf("Display: %hux%hu\n", (uint8_t)IMG_WIDTH_PX, (uint8_t)IMG_HEIGHT_PX);
-}
