@@ -40,7 +40,7 @@ void main(void)
     if (_cpu == CGB_TYPE) {
         cpu_fast();
         set_pal_normal();
-        set_pal_spr_draw();
+        update_cursor_style_to_draw();
     }
 
     UPDATE_KEYS();

@@ -38,7 +38,7 @@
 // - 2bpp Image Max = 1282 - 12 palette (@ 4 col) = 1270 Bytes * 4 pixels per byte = 5080  Pixels -> fits: 72 x 64[tiles:9x8] = 4608
 
 #define IMG_BPP        PNG_BPP_1
-#define TILE_SZ_PX         8u
+#define TILE_SZ_PX      8u
 #define TILE_SZ_BYTES  16u
 
 // Note: Optimized display capture/read -> png relies on image being aligned to tiles horizontally
@@ -75,9 +75,12 @@
 #define SCREEN_X_MAX_8U  (DEVICE_SCREEN_PX_WIDTH - 1u)
 #define SCREEN_Y_MAX_8U  (DEVICE_SCREEN_PX_HEIGHT - 1u)
 
+#define SPRITE_TILE_MOUSE_START 0u
+#define SPR_TYPE_CURSOR_POINTER (SPRITE_TILE_MOUSE_START)
+#define SPR_TYPE_CURSOR_ERASER  (SPRITE_TILE_MOUSE_START + 1u)
 
-#define SPRITE_MOUSE_CURSOR 0u
-#define CURSOR_POS_UNSET_8U    0xFFu
+#define SPRITE_ID_MOUSE_CURSOR  0u
+#define CURSOR_POS_UNSET_8U     0xFFu
 
 #define CURSOR_8U_TO_16U(value) ((uint16_t)value << 8)
 #define CURSOR_TO_8U_X() ((uint8_t)(app_state.cursor_x >> 8))
@@ -183,8 +186,8 @@ void app_state_reset(void) BANKED;
 void set_pal_qrmode(void) BANKED;
 void set_pal_normal(void) BANKED;
 
-void set_pal_spr_draw(void) BANKED;
-void set_pal_spr_menu(void) BANKED;
+void update_cursor_style_to_draw(void) BANKED;
+void update_cursor_style_to_menu(void) BANKED;
 
 
 

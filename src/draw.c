@@ -17,12 +17,16 @@
 #define DRAWING_SAVE_SLOT_SIZE    (IMG_WIDTH_TILES * IMG_HEIGHT_TILES * TILE_SZ_BYTES)
 #define DRAWING_VRAM_START        (APA_MODE_VRAM_START + (((IMG_TILE_Y_START * DEVICE_SCREEN_WIDTH) + IMG_TILE_X_START) * TILE_SZ_BYTES))
 
+#define TOOL_ERASER_SIZE  4u
+
 static uint8_t get_radius(uint8_t cursor_8u_x, uint8_t cursor_8u_y);
 
 static void draw_tool_pencil(uint8_t cursor_8u_x, uint8_t cursor_8u_y);
 static void draw_tool_line(uint8_t cursor_8u_x, uint8_t cursor_8u_y);
 static void draw_tool_rect(uint8_t cursor_8u_x, uint8_t cursor_8u_y);
 static void draw_tool_circle(uint8_t cursor_8u_x, uint8_t cursor_8u_y);
+static void draw_tool_eraser(uint8_t cursor_8u_x, uint8_t cursor_8u_y);
+
 
 static uint8_t tool_start_x, tool_start_y;
 static bool    tool_currently_drawing = false;
@@ -110,7 +114,7 @@ void draw_update(uint8_t cursor_8u_x, uint8_t cursor_8u_y) BANKED {
             break;
         case DRAW_TOOL_LINE: draw_tool_line(cursor_8u_x,cursor_8u_y);
             break;
-        case DRAW_TOOL_ERASER:
+        case DRAW_TOOL_ERASER: draw_tool_eraser(cursor_8u_x,cursor_8u_y);
             break;
         case DRAW_TOOL_RECT:  draw_tool_rect(cursor_8u_x,cursor_8u_y);
             break;
@@ -401,4 +405,21 @@ static void draw_tool_circle(uint8_t cursor_8u_x, uint8_t cursor_8u_y) {
         drawing_restore_default_colors();
     }
 }
+
+
+static void draw_tool_eraser(uint8_t cursor_8u_x, uint8_t cursor_8u_y) {
+
+    if (KEY_PRESSED(DRAW_MAIN_BUTTON)) {
+        uint8_t end_x = cursor_8u_x + (TOOL_ERASER_SIZE - 1u);
+        uint8_t end_y = cursor_8u_y + (TOOL_ERASER_SIZE - 1u);
+
+        if (end_x > IMG_X_END) end_x = IMG_X_END;
+        if (end_y > IMG_Y_END) end_y = IMG_Y_END;
+
+        color(WHITE,WHITE,SOLID);
+        box(cursor_8u_x, cursor_8u_y, end_x, end_y, M_FILL);
+    }
+    drawing_restore_default_colors();
+}
+
 

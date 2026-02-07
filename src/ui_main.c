@@ -8,6 +8,7 @@
 #include "common.h"
 #include "input.h"
 
+#include "sprites.h"
 #include "draw.h"
 #include "ui_main.h"
 #include "ui_menu_area.h"
@@ -16,24 +17,6 @@
 #include <ui_main_bg_cde.h>  // BG APA style image  // CDE alternate theme
 
 #pragma bank 255  // Autobanked
-
-
-// TODO: make proper resource images out of these cursors
-static const unsigned char mouse_cursors[] = {
-  // Arrow 1
-  0xFE, 0xFE, 0xFC, 0x84, 0xF8, 0x98, 0xF8, 0xA8,
-  0xFC, 0xB4, 0xCE, 0xCA, 0x87, 0x85, 0x03, 0x03,
-  // Arrow 2
-  0x80, 0x80, 0xC0, 0xC0, 0xE0, 0xA0, 0xF0, 0x90,
-  0xF8, 0x88, 0xF0, 0xB0, 0xD8, 0xD8, 0x08, 0x08,
-  // Arrow 3
-  0x80, 0x80, 0xC0, 0xC0, 0xE0, 0xA0, 0xF0, 0x90,
-  0xF8, 0x88, 0xFC, 0x84, 0xF8, 0x98, 0xE0, 0xE0,
-  // Hand
-  0x10, 0x10, 0x38, 0x28, 0x38, 0x28, 0x7E, 0x6E,
-  0xFE, 0xA2, 0xFE, 0x82, 0x7E, 0x42, 0x3E, 0x3E
-};
-
 
 static void ui_cursor_teleport_save_zone(uint8_t teleport_zone_to_save);
 static inline void ui_cursor_update(uint8_t cursor_8u_x, uint8_t cursor_8u_y);
@@ -46,9 +29,8 @@ void ui_init(void) BANKED {
     HIDE_BKG;
     HIDE_SPRITES;
 
-    set_sprite_data(0u, 2u, mouse_cursors);
-    set_sprite_tile(SPRITE_MOUSE_CURSOR, 1u);
-    move_sprite(0, 160u / 2, 144u / 2);
+    // Load the sprite cursor tiles
+    set_sprite_data(SPRITE_TILE_MOUSE_START, mouse_cursors_count, mouse_cursors);
 
     // == Enters drawing mode ==
     mode(M_DRAWING);
@@ -141,14 +123,14 @@ void ui_cycle_cursor_teleport(void) BANKED {
         case CURSOR_TELEPORT_DRAWING:
             app_state.cursor_x = app_state.cursor_draw_saved_x;
             app_state.cursor_y = app_state.cursor_draw_saved_y;
-            set_pal_spr_draw();
+            update_cursor_style_to_draw();
             break;
 
     // TODO: UI: Cursor: Maybe teleport to menus should always snap to center of menu area instead of remembering, it might be more annoying in practice
         case CURSOR_TELEPORT_MENUS:
             app_state.cursor_x = app_state.cursor_menus_saved_x;
             app_state.cursor_y = app_state.cursor_menus_saved_y;
-            set_pal_spr_menu();
+            update_cursor_style_to_menu();
             break;
     }
 }
@@ -161,7 +143,7 @@ static void inline ui_cursor_update(uint8_t cursor_8u_x, uint8_t cursor_8u_y) {
 
     // Move the cursor
     // TODO: Maybe fancier updates here later
-    move_sprite(SPRITE_MOUSE_CURSOR, cursor_8u_x + DEVICE_SPRITE_PX_OFFSET_X, cursor_8u_y + DEVICE_SPRITE_PX_OFFSET_Y);
+    move_sprite(SPRITE_ID_MOUSE_CURSOR, cursor_8u_x + DEVICE_SPRITE_PX_OFFSET_X, cursor_8u_y + DEVICE_SPRITE_PX_OFFSET_Y);
 }
 
 
@@ -188,7 +170,7 @@ static inline void ui_cursor_teleport_update(bool cursor_in_drawing, uint16_t cu
         app_state.cursor_draw_saved_x = cursor_last_x;
         app_state.cursor_draw_saved_y = cursor_last_y;
         app_state.cursor_teleport_zone = CURSOR_TELEPORT_MENUS;
-        set_pal_spr_menu();
+        update_cursor_style_to_menu();
     }
     else if ((cursor_in_drawing == true) && (app_state.cursor_teleport_zone == CURSOR_TELEPORT_MENUS)) {
         // Save position in drawing and change state to menu area
@@ -196,7 +178,7 @@ static inline void ui_cursor_teleport_update(bool cursor_in_drawing, uint16_t cu
         app_state.cursor_menus_saved_x = cursor_last_x;
         app_state.cursor_menus_saved_y = cursor_last_y;
         app_state.cursor_teleport_zone = CURSOR_TELEPORT_DRAWING;
-        set_pal_spr_draw();
+        update_cursor_style_to_draw();
     }
 
     // TODO: J_SELECT instead?

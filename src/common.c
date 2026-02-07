@@ -2,6 +2,7 @@
 #include <stdint.h>
 
 #include "common.h"
+#include "sprites.h"
 
 #pragma bank 255  // Autobanked
 
@@ -63,13 +64,25 @@ void set_pal_normal(void) BANKED {
 }
 
 
-void set_pal_spr_draw(void) BANKED {
+void update_cursor_style_to_draw(void) BANKED {
+    // Palette
     if (_cpu == CGB_TYPE)  set_sprite_palette(0u, 1u, SPR_PAL_DRAW_CGB);
     else                   OBP1_REG = SPR_PAL_DRAW_DMG;
+
+    // Which cursor type is active
+    if (app_state.drawing_tool == DRAW_TOOL_ERASER)
+        set_sprite_tile(SPRITE_ID_MOUSE_CURSOR, SPR_TYPE_CURSOR_ERASER);
+    else
+        set_sprite_tile(SPRITE_ID_MOUSE_CURSOR, SPR_TYPE_CURSOR_POINTER);
 }
 
-void set_pal_spr_menu(void) BANKED {
+
+void update_cursor_style_to_menu(void) BANKED {
+    // Palette
     if (_cpu == CGB_TYPE)  set_sprite_palette(0u, 1u, SPR_PAL_MENU_CGB);
     else                   OBP1_REG = SPR_PAL_MENU_DMG;
+
+    // Which cursor type is active
+    set_sprite_tile(SPRITE_ID_MOUSE_CURSOR, SPR_TYPE_CURSOR_POINTER);
 }
 
