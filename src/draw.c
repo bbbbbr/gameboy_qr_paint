@@ -427,7 +427,11 @@ static void draw_tool_eraser(uint8_t cursor_8u_x, uint8_t cursor_8u_y) {
         if (end_y > IMG_Y_END) end_y = IMG_Y_END;
 
         color(WHITE,WHITE,SOLID);
-        box(cursor_8u_x, cursor_8u_y, end_x, end_y, M_FILL);
+        // Work around a bug in GBDK box() where it draws an I-Bar shape instead of line when x1==x2
+        if (cursor_8u_x == end_x)
+            line(cursor_8u_x, cursor_8u_y, end_x, end_y);
+        else
+            box(cursor_8u_x, cursor_8u_y, end_x, end_y, M_FILL);
     }
     drawing_restore_default_colors();
 }
