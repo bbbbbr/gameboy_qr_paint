@@ -13,7 +13,7 @@ Draw on the Game Boy and share it direct to your phone using a QRCode!
 Drawing Controls:
 - `D-Pad`: Move cursor
 - `A`: Draws with tool
-- `B`: Cancel tool / Teleport cursor between menu and drawing areas
+- `B`: Cancel tool action / Teleport cursor between menu and drawing areas
 - `SELECT`: Toggle Cursor Speed
 - `START`: Create QRCode
 
