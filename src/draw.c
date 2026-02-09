@@ -509,11 +509,17 @@ static void draw_tool_floodfill(uint8_t x, uint8_t y) {
             }
 
             while (x1 <= x2) {
-                uint8_t st_x = x1;
+
+                uint8_t x_st = x1;
+                uint8_t x_end = 0;
                 while (flood_check_fillable(x1, y)) {
-                    plot_point(x1, y);
+                    x_end = x1; // plot_point(x1, y);
                     x1 = x1 + 1;
                 }
+                // Speed up horizontal runs (tested in the above loop)
+                // by drawing them as a line instead of as a pixel
+                if (x_end) line(x_st, y, x_end, y);
+
                 if (x1     >  x) if (flood_queue_push(x, x1 - 1, y + dy, dy) == FILL_OUT_OF_MEMORY) return;
                 if (x1 - 1 > x2) if (flood_queue_push(x2 + 1, x1 - 1, y - dy, -dy) == FILL_OUT_OF_MEMORY) return;
                 x1 = x1 + 1;
