@@ -501,7 +501,7 @@ static void draw_tool_floodfill(uint8_t x, uint8_t y) {
 
             uint8_t x = x1;
             if (flood_check_fillable(x, y)) {
-                if (flood_check_fillable(x - 1, y)) {
+                while (flood_check_fillable(x - 1, y)) {
                     plot_point(x - 1, y);
                     x = x - 1;
                 }
