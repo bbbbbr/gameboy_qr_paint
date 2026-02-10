@@ -64,7 +64,11 @@ void ui_redraw_menus_all(void) NONBANKED {
     // Redraw various menus and their state
     ui_menu_tools_draw_highlight(app_state.drawing_tool, TOOLS_MENU_HIGHLIGHT_COLOR);
     ui_menu_file_draw_highlight(app_state.save_slot_current, FILE_MENU_HIGHLIGHT_COLOR);
-    ui_undo_button_disable();
+    if (app_state.undo_count > DRAW_UNDO_COUNT_NONE)
+        ui_undo_button_enable();
+    else
+        ui_undo_button_disable();
+
     DISPLAY_ON;
 
     // EMU_printf("Display: %hux%hu\n", (uint8_t)IMG_WIDTH_PX, (uint8_t)IMG_HEIGHT_PX);
