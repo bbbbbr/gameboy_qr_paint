@@ -10,7 +10,15 @@
 void drawing_save_to_sram(uint8_t sram_bank, uint8_t save_slot) BANKED {
 
     SWITCH_RAM(sram_bank);
-    DISPLAY_OFF;
+    // VRAM/SRAM copy takes long enough with display off that it's distracting
+    // (at least on emulators in DMG mode)
+    //
+    // TODO: OPTIMIZE: Pencil and Eraser have a few frames of lag since they snapshot when tool starts
+    // drawing (others only do so on draw commit). Could snapshot while idle and then only commit the
+    // snapshot once the tool starts drawing, but that wastes a slot. The lag doesn't seem to noticeable
+    // right now when DMG-drawing.
+
+    // DISPLAY_OFF;
     uint8_t * p_sram_save_slot = (uint8_t *)(SRAM_BASE_A000 + (DRAW_SAVE_SLOT_SIZE * save_slot));
     uint8_t * p_vram_drawing   = (uint8_t *)(DRAWING_VRAM_START);
 
@@ -19,13 +27,13 @@ void drawing_save_to_sram(uint8_t sram_bank, uint8_t save_slot) BANKED {
         p_sram_save_slot += DRAWING_ROW_OF_TILES_SZ;
         p_vram_drawing   += SCREEN_ROW_SZ;
     }
-    DISPLAY_ON;
+    // DISPLAY_ON;
 }
 
 void drawing_restore_from_sram(uint8_t sram_bank, uint8_t save_slot) BANKED {
 
     SWITCH_RAM(sram_bank);
-    DISPLAY_OFF;
+    // DISPLAY_OFF;
     uint8_t * p_sram_save_slot = (uint8_t *)(SRAM_BASE_A000 + (DRAW_SAVE_SLOT_SIZE * save_slot));
     uint8_t * p_vram_drawing   = (uint8_t *)(DRAWING_VRAM_START);
 
@@ -34,7 +42,7 @@ void drawing_restore_from_sram(uint8_t sram_bank, uint8_t save_slot) BANKED {
         p_sram_save_slot += DRAWING_ROW_OF_TILES_SZ;
         p_vram_drawing   += SCREEN_ROW_SZ;
     }
-    DISPLAY_ON;
+    // DISPLAY_ON;
 }
 
 
