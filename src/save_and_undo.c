@@ -5,6 +5,7 @@
 
 #include "common.h"
 #include "save_and_undo.h"
+#include "ui_menu_area.h"
 
 void drawing_save_to_sram(uint8_t sram_bank, uint8_t save_slot) BANKED {
 
@@ -57,10 +58,10 @@ void drawing_take_undo_snapshot(void) BANKED {
     drawing_save_to_sram(sram_bank, app_state.undo_slot_current);
 
     EMU_printf("  - Undo: Done (count=%hu, slot=%hu)\n", (uint8_t)app_state.undo_count, (uint8_t)app_state.undo_slot_current);
-    // // Display undo button if going from zero to 1+ snapshots
-    // If (app_state.undo_slot_count == 1u) {
-    //
-    // }
+    // Display undo button if going from zero to 1 snapshots
+    if (app_state.undo_count == 1u) {
+        ui_undo_button_enable();
+    }
 }
 
 
@@ -84,10 +85,10 @@ void drawing_restore_undo_snapshot(void) BANKED {
 
         EMU_printf("  - Undo: Restore completed (count=%hu, slot=%hu)\n", (uint8_t)app_state.undo_count, (uint8_t)app_state.undo_slot_current);
 
-            // // Remove undo button if changing to zero snapshots
-            // If (app_state.undo_count == 0u) {
-            //
-            // }
+            // Remove undo button if changing to zero snapshots
+            if (app_state.undo_count == 0u) {
+                ui_undo_button_disable();
+            }
     } else {
         EMU_printf("  - Undo: None Found (count=%hu, slot=%hu)\n", (uint8_t)app_state.undo_count, (uint8_t)app_state.undo_slot_current);
     }

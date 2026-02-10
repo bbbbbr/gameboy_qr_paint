@@ -3,4 +3,5 @@
 -tiles_only
 -bpp 2
 -b 255
+-keep_palette_order
 

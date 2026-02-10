@@ -13,11 +13,21 @@
 #include "ui_menu_area.h"
 #include "save_and_undo.h"
 
+#include "save_and_undo.h"
+
 #include <ui_main_bg.h>      // BG APA style image
 #include <ui_main_bg_cde.h>  // BG APA style image  // CDE alternate theme
 
+#include <undo_button.h>     // Tiles for undo button states
+
 #pragma bank 255  // Autobanked
 
+
+#define UNDO_BUTTON_TILE_DISABLED (0u * TILE_SZ_BYTES)
+#define UNDO_BUTTON_TILE_ENABLED  (1u * TILE_SZ_BYTES)
+
+#define UNDO_BUTTON_TILE_ID       94u // Index of tile in apa image mode
+#define UNDO_BUTTON_VRAM_ADDR     (_VRAM9000 + (UNDO_BUTTON_TILE_ID * TILE_SZ_BYTES)) // Index of tile in apa image mode
 
 const uint8_t menu_tools[DRAW_TOOL_COUNT] = {
     DRAW_TOOL_PENCIL,
@@ -54,7 +64,7 @@ void ui_redraw_menus_all(void) NONBANKED {
     // Redraw various menus and their state
     ui_menu_tools_draw_highlight(app_state.drawing_tool, TOOLS_MENU_HIGHLIGHT_COLOR);
     ui_menu_file_draw_highlight(app_state.save_slot_current, FILE_MENU_HIGHLIGHT_COLOR);
-
+    ui_undo_button_disable();
     DISPLAY_ON;
 
     // EMU_printf("Display: %hux%hu\n", (uint8_t)IMG_WIDTH_PX, (uint8_t)IMG_HEIGHT_PX);
@@ -115,7 +125,7 @@ static void ui_menu_tools(uint8_t cursor_8u_y) {
     // A button used to press buttons
     if (KEY_TICKED(UI_ACTION_BUTTON)) {
         // Clear any pending tool actions
-        draw_tools_cancel_and_reset();
+        draw_tools_cancel_and_reset(); // TODO: this seems redundant since it's called in the function that calls this
 
         // Tool icons are uniform in size, so divide position by size to get it
         uint8_t new_tool = (cursor_8u_y - TOOLS_MENU_Y_START) / TOOLS_MENU_ITEM_HEIGHT;
@@ -218,6 +228,24 @@ static void ui_swap_active_color(void) {
     box(COLOR_MAIN_X_START, COLOR_MAIN_Y_START, COLOR_MAIN_X_END, COLOR_MAIN_Y_END, M_FILL);
 }
 
+// TODO: could make common nonbanked set tile utility function
+void ui_undo_button_enable(void) NONBANKED {
+    uint8_t save_bank = CURRENT_BANK;
+    SWITCH_ROM(BANK(undo_button));
+        vmemcpy(UNDO_BUTTON_VRAM_ADDR, undo_button_tiles + UNDO_BUTTON_TILE_ENABLED, TILE_SZ_BYTES);
+    SWITCH_ROM(save_bank);
+
+    EMU_printf("enable undo\n");
+}
+
+void ui_undo_button_disable(void) NONBANKED {
+    uint8_t save_bank = CURRENT_BANK;
+    SWITCH_ROM(BANK(undo_button));
+        vmemcpy(UNDO_BUTTON_VRAM_ADDR, undo_button_tiles + UNDO_BUTTON_TILE_DISABLED, TILE_SZ_BYTES);
+    SWITCH_ROM(save_bank);
+
+    EMU_printf("disable undo\n");
+}
 
 static void ui_perform_undo(void) {
     drawing_restore_undo_snapshot();

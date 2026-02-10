@@ -77,11 +77,11 @@
 
 // ===== UNDO BUTTON =====
 
-#define UNDO_BUTTON_WIDTH  11u
-#define UNDO_BUTTON_HEIGHT 11u
+#define UNDO_BUTTON_WIDTH  12u
+#define UNDO_BUTTON_HEIGHT 12u
 
-#define UNDO_BUTTON_X_START 111u
-#define UNDO_BUTTON_Y_START 127u
+#define UNDO_BUTTON_X_START 110u
+#define UNDO_BUTTON_Y_START 126u
 
 #define UNDO_BUTTON_X_END  ((UNDO_BUTTON_X_START) + UNDO_BUTTON_WIDTH)
 #define UNDO_BUTTON_Y_END  ((UNDO_BUTTON_Y_START) + (UNDO_BUTTON_HEIGHT))
@@ -92,5 +92,8 @@ void ui_handle_menu_area(uint8_t cursor_8u_x, uint8_t cursor_8u_y) BANKED;
 
 void ui_menu_tools_draw_highlight(uint8_t tool_num, uint8_t draw_color) BANKED;
 void ui_menu_file_draw_highlight(uint8_t num, uint8_t draw_color) BANKED;
+
+void ui_undo_button_enable(void) NONBANKED;
+void ui_undo_button_disable(void) NONBANKED;
 
 #endif // UI_MAIN_AREA_H
