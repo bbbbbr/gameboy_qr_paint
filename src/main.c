@@ -7,12 +7,13 @@
 #include "img_2_qrcode.h"
 #include "draw.h"
 #include "ui_main.h"
+#include "save_and_undo.h"
 
 void make_and_show_qrcode(void);
 
 void make_and_show_qrcode(void) {
 
-    drawing_save_to_sram(SRAM_BANK_CUR_DRAWING_CACHE, DRAWING_SAVE_SLOT_MIN);
+    drawing_take_undo_snapshot();
     image_to_png_qrcode_url();
     set_pal_qrmode();
 
@@ -27,6 +28,7 @@ void make_and_show_qrcode(void) {
 
     set_pal_normal();
     ui_redraw_after_qrcode();
+    drawing_restore_undo_snapshot();
 
     SHOW_SPRITES;
 }

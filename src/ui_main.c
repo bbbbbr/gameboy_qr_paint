@@ -78,7 +78,6 @@ void ui_redraw_after_qrcode(void) BANKED {
     ui_redraw_menus_all();
 
     // Then restore the drawing on top of it
-    drawing_restore_from_sram(SRAM_BANK_CUR_DRAWING_CACHE, DRAWING_SAVE_SLOT_MIN);
     drawing_set_to_main_colors();
 }
 

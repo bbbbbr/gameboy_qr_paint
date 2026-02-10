@@ -10,8 +10,11 @@ app_state_t app_state;
 
 void app_state_reset(void) BANKED {
 
-    // Save related
-    app_state.save_slot_current = DRAWING_SAVE_SLOT_MIN;
+    // Save and Undo related
+    app_state.save_slot_current = DRAW_SAVE_SLOT_DEFAULT;
+
+    app_state.undo_count        = DRAW_UNDO_COUNT_NONE;
+    app_state.undo_slot_current = DRAW_UNDO_SLOT_DEFAULT;
 
     // UI related
     app_state.cursor_x = CURSOR_8U_TO_16U(DEVICE_SCREEN_PX_WIDTH / 2);
@@ -37,6 +40,7 @@ void app_state_reset(void) BANKED {
 
     app_state.drawing_tool = DRAW_TOOL_DEFAULT;
     app_state.draw_tool_using_b_button_action = false;
+    app_state.tool_currently_drawing          = false;
 
     app_state.draw_color_main = DRAW_COLOR_MAIN_DEFAULT;
     app_state.draw_color_bg   = DRAW_COLOR_BG_DEFAULT;

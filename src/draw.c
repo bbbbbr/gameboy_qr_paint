@@ -6,16 +6,19 @@
 #include "common.h"
 #include "input.h"
 
+#include "save_and_undo.h"
 #include "ui_main.h"
 
 #include <gbdk/emu_debug.h>  // Sensitive to duplicated line position across source files
 
 #pragma bank 255  // Autobanked
 
-#define DRAWING_ROW_OF_TILES_SZ   (IMG_WIDTH_TILES * TILE_SZ_BYTES)
-#define SCREEN_ROW_SZ             (DEVICE_SCREEN_WIDTH * TILE_SZ_BYTES)
-#define DRAWING_SAVE_SLOT_SIZE    (IMG_WIDTH_TILES * IMG_HEIGHT_TILES * TILE_SZ_BYTES)
-#define DRAWING_VRAM_START        (APA_MODE_VRAM_START + (((IMG_TILE_Y_START * DEVICE_SCREEN_WIDTH) + IMG_TILE_X_START) * TILE_SZ_BYTES))
+enum {
+    DRAW_ACTION_IDLE,
+    DRAW_ACTION_FINALIZE,
+    DRAW_ACTION_CANCEL,
+    DRAW_ACTION_NEW_DRAW_POSITION
+};
 
 #define TOOL_ERASER_SIZE  4u
 
@@ -28,67 +31,22 @@ static void draw_tool_circle(uint8_t cursor_8u_x, uint8_t cursor_8u_y);
 static void draw_tool_eraser(uint8_t cursor_8u_x, uint8_t cursor_8u_y);
 static void draw_tool_floodfill(uint8_t cursor_8u_x, uint8_t cursor_8u_y);
 
+static void draw_tool_line_finalize_last_preview(void);
+static void draw_tool_rect_finalize_last_preview(void);
+static void draw_tool_circle_finalize_last_preview(void);
+
 static bool flood_queue_push(int8_t x1, int8_t x2, int8_t y1, int8_t y2);
 static bool flood_check_fillable(uint8_t x, uint8_t y);
 
-static uint8_t tool_start_x, tool_start_y;
-static bool    tool_currently_drawing = false;
-static bool    tool_fillstyle = M_NOFILL;
+static uint8_t  tool_start_x, tool_start_y;
+static bool     tool_fillstyle = M_NOFILL;
+static bool     tool_undo_snapshot_taken = false;
 
 // For Flood-fill
 static int8_t * p_flood_queue = (int8_t *)SRAM_UPPER_B000; // Flood-fill Queue temp buffer is in SRAM shared with other uses
 static uint16_t flood_queue_count = 0u;
 #define FLOOD_QUEUE_ENTRY_SIZE 4u  // Four bytes per flood-fill queue entry
 #define FILL_OUT_OF_MEMORY false
-
-
-// TODO: REORG: split sram load and save out to to new file: file_loadsave.c
-void drawing_save_to_sram(uint8_t sram_bank, uint8_t save_slot) BANKED {
-
-    SWITCH_RAM(sram_bank);
-    DISPLAY_OFF;
-    uint8_t * p_sram_save_slot = (uint8_t *)(SRAM_BASE_A000 + (DRAWING_SAVE_SLOT_SIZE * save_slot));
-    uint8_t * p_vram_drawing   = (uint8_t *)(DRAWING_VRAM_START);
-
-    for (uint8_t tile_row = 0u; tile_row < IMG_HEIGHT_TILES; tile_row++) {
-        vmemcpy(p_sram_save_slot, p_vram_drawing, DRAWING_ROW_OF_TILES_SZ); // Copy all tile patterns
-        p_sram_save_slot += DRAWING_ROW_OF_TILES_SZ;
-        p_vram_drawing   += SCREEN_ROW_SZ;
-    }
-    DISPLAY_ON;
-}
-
-void drawing_restore_from_sram(uint8_t sram_bank, uint8_t save_slot) BANKED {
-
-    SWITCH_RAM(sram_bank);
-    DISPLAY_OFF;
-    uint8_t * p_sram_save_slot = (uint8_t *)(SRAM_BASE_A000 + (DRAWING_SAVE_SLOT_SIZE * save_slot));
-    uint8_t * p_vram_drawing   = (uint8_t *)(DRAWING_VRAM_START);
-
-    for (uint8_t tile_row = 0u; tile_row < IMG_HEIGHT_TILES; tile_row++) {
-        vmemcpy(p_vram_drawing, p_sram_save_slot, DRAWING_ROW_OF_TILES_SZ); // Copy all tile patterns
-        p_sram_save_slot += DRAWING_ROW_OF_TILES_SZ;
-        p_vram_drawing   += SCREEN_ROW_SZ;
-    }
-    DISPLAY_ON;
-
-}
-
-
-// // TODO: For testing, not final Controls UI
-// static void test_load_save(void) {
-//
-//     switch (GET_KEYS_TICKED(~J_SELECT)) {
-//         case J_UP:   if (app_state.save_slot_current > DRAWING_SAVE_SLOT_MIN) app_state.save_slot_current--;
-//             break;
-//         case J_DOWN: if (app_state.save_slot_current < DRAWING_SAVE_SLOT_MAX) app_state.save_slot_current++;
-//             break;
-//         case J_A:    drawing_restore_from_sram(SRAM_BANK_DRAWING_SAVES, app_state.save_slot_current);
-//             break;
-//         case J_B:    drawing_save_to_sram(SRAM_BANK_DRAWING_SAVES, app_state.save_slot_current);
-//             break;
-//     }
-// }
 
 
 
@@ -107,6 +65,8 @@ void drawing_set_to_alt_colors(void) BANKED {
 
 void drawing_clear(void) BANKED {
 
+    drawing_take_undo_snapshot();
+
     // Fill active image area in white
     drawing_set_to_alt_colors();
     box(IMG_X_START, IMG_Y_START, IMG_X_END, IMG_Y_END, M_FILL);
@@ -124,7 +84,7 @@ void draw_init(void) BANKED {
 // Expects UPDATE_KEYS() to have been called before each invocation
 void draw_update(uint8_t cursor_8u_x, uint8_t cursor_8u_y) BANKED {
 
-    if (KEY_TICKED(J_SELECT)) ui_cycle_cursor_speed();  // TODO: Possibly buggy right now?
+    if (KEY_TICKED(J_SELECT)) ui_cycle_cursor_speed();
 
     switch (app_state.drawing_tool) {
         case DRAW_TOOL_PENCIL: draw_tool_pencil(cursor_8u_x,cursor_8u_y);
@@ -148,46 +108,73 @@ void draw_update(uint8_t cursor_8u_x, uint8_t cursor_8u_y) BANKED {
 
 // Clear any pending tool behavior and state
 // May be called when switching tools/etc
-void draw_tools_cancel_and_reset(void) BANKED {  // TODO
+void draw_tools_cancel_and_reset(void) BANKED {
+
+    if (app_state.tool_currently_drawing) {
+        // For a couple tools that show previews there needs to be cleanup.
+        // This is important since otherwise it complicates the undo approach of not saving
+        // before tool preview starts and instead only saving right-before-finalizing (to avoid
+        // using up and discarding undo states if the tool is canceled via B button/etc)
+
+        switch (app_state.drawing_tool) {
+            case DRAW_TOOL_LINE: draw_tool_line_finalize_last_preview();
+                                 break;
+            case DRAW_TOOL_RECT: draw_tool_rect_finalize_last_preview();
+                                 break;
+            case DRAW_TOOL_CIRCLE: draw_tool_circle_finalize_last_preview();
+                                   break;
+        }
+    }
 
     // Clear any reservation on the B button
     app_state.draw_tool_using_b_button_action = false;
-
-    tool_currently_drawing = false;
+    app_state.tool_currently_drawing = false;
+    tool_undo_snapshot_taken = false;
 
     drawing_set_to_main_colors();
-
-    // switch (app_state.drawing_tool) {
-    //     case DRAW_TOOL_PENCIL: // Nothing to reset for pencil
-    //         break;
-    //     case DRAW_TOOL_LINE: tool_currently_drawing = false; // Undraw any pending lines
-    //         break;
-    //     case DRAW_TOOL_ERASER:
-    //         break;
-    //     case DRAW_TOOL_RECT:
-    //         break;
-    //     case DRAW_TOOL_CIRCLE:
-    //         break;
-    //     case DRAW_TOOL_FLOODFILL:
-    //         break;
-    // }
 }
 
 
 static void draw_tool_pencil(uint8_t cursor_8u_x, uint8_t cursor_8u_y) {
 
     if (KEY_PRESSED(DRAW_MAIN_BUTTON)) {
+        // Take a undo snapshot only at the start of a drawing segment
+        if (tool_undo_snapshot_taken == false) {
+            drawing_take_undo_snapshot();
+            tool_undo_snapshot_taken = true;
+        }
+
         plot_point(cursor_8u_x, cursor_8u_y);
     }
+    else if (KEY_PRESSED(DRAW_MAIN_BUTTON) == false) {
+        tool_undo_snapshot_taken = false;
+    }
+}
+
+
+
+static void draw_tool_line_finalize_last_preview(void) {
+    // Undraw last preview
+    color(BLACK,WHITE,XOR);
+    line(tool_start_x, tool_start_y, app_state.draw_cursor_8u_last_x, app_state.draw_cursor_8u_last_y);
+
+    // Take undo snapshot only if not already takenif needed (see main line draw for details)
+    if (tool_undo_snapshot_taken == false)
+        drawing_take_undo_snapshot();
+
+    // Draw finalized version
+    drawing_set_to_main_colors();
+    line(tool_start_x, tool_start_y, app_state.draw_cursor_8u_last_x, app_state.draw_cursor_8u_last_y);
 }
 
 
 static void draw_tool_line(uint8_t cursor_8u_x, uint8_t cursor_8u_y) {
 
-    if (tool_currently_drawing == false) {
+    if (app_state.tool_currently_drawing == false) {
 
         // Start drawing a line
         if (KEY_TICKED(DRAW_MAIN_BUTTON)) {
+            tool_undo_snapshot_taken = false;
             tool_start_x = cursor_8u_x;
             tool_start_y = cursor_8u_y;
             // Draw the first line (1 pixel) XOR style so it can be undrawn
@@ -196,64 +183,86 @@ static void draw_tool_line(uint8_t cursor_8u_x, uint8_t cursor_8u_y) {
 
             // Set line starting point
             app_state.draw_tool_using_b_button_action = true;
-            tool_currently_drawing = true;
+            app_state.tool_currently_drawing = true;
         }
 
     } else {
         // Line drawing is active, currently previewing position
 
-        // Un-draw the line from the last frame (XOR)
-        // But only if the cursor moved, so that it remains visible otherwise
-        bool new_draw_position = false;
-        if ((cursor_8u_x != app_state.draw_cursor_8u_last_x) || (cursor_8u_y !=app_state.draw_cursor_8u_last_y)) {
+        uint8_t current_action = DRAW_ACTION_IDLE;
+        if      (KEY_TICKED(DRAW_MAIN_BUTTON))   current_action = DRAW_ACTION_FINALIZE;
+        else if (KEY_TICKED(DRAW_CANCEL_BUTTON)) current_action = DRAW_ACTION_CANCEL;
+        else if ((cursor_8u_x != app_state.draw_cursor_8u_last_x) ||
+                 (cursor_8u_y !=app_state.draw_cursor_8u_last_y)) current_action = DRAW_ACTION_NEW_DRAW_POSITION;
+
+
+        // Un-draw from the last frame (XOR)
+        // But only if the cursor moved (so it remains visible), it's being canceled, or being finalized (to take a clean undo snapshot)
+        if (current_action != DRAW_ACTION_IDLE) {
             color(BLACK,WHITE,XOR);
             line(tool_start_x, tool_start_y, app_state.draw_cursor_8u_last_x, app_state.draw_cursor_8u_last_y);
-            new_draw_position = true;
         }
 
-        // If finalizing the line is requested, draw it normally
-        if (KEY_TICKED(DRAW_MAIN_BUTTON)) {
-            // Finalize the line
+        // If finalizing is requested, draw it normally
+        if (current_action == DRAW_ACTION_FINALIZE) {
+            // Finalize
+
+            // Note: Unlike Rect and Circle, connected multi-line segment drawing presents two approaches to Undo
+            //       1. Take a snapshot at the start and waste it if the user cancels a single line segment.
+            //          Multiple started-and-canceled segments in a row waste all the undo slots
+            //       2. Take a snapshot for each line segment, which uses excessive undo slots is less non-intuitive
+            //       3. The middle ground is to Defer the first snapshot until after the first line segment is about
+            //          to be finalized. After that don't take anymore snapshots until line drawing is completed
+            //   
+            // Approach taken is number #3
+            // So only take a snapshot before committing the first line segment
+            if (tool_undo_snapshot_taken == false) {
+                drawing_take_undo_snapshot();
+                tool_undo_snapshot_taken = true;
+            }
+
             drawing_set_to_main_colors();
             line(tool_start_x, tool_start_y, cursor_8u_x, cursor_8u_y);
 
-            // Finalizing the line doesn't end line drawing, instead
+            // Finalizing doesn't end line drawing, instead
             // it begins a new line at the current position
             tool_start_x = cursor_8u_x;
             tool_start_y = cursor_8u_y;
         }
-        else {
-            // Otherwise the Line is still being actively drawn
+        else if (current_action == DRAW_ACTION_CANCEL) {
 
-            // B Button cancels drawing the current line
-            if (KEY_TICKED(DRAW_CANCEL_BUTTON)) {
-
-                // Cancel all line drawing
-                tool_currently_drawing = false;
-                app_state.draw_tool_using_b_button_action = false;
-
-                // If it's the same position as before then need to undraw the line to cancel
-                if (!new_draw_position) {
-                    color(BLACK,WHITE,XOR);
-                    line(tool_start_x, tool_start_y, app_state.draw_cursor_8u_last_x, app_state.draw_cursor_8u_last_y);
-                }
-            }
-            else {
-                // Otherwise, if moved, update the line preview to the new position
-                if (new_draw_position) {
-                    // Again, XOR draw so it can be un-drawn later
-                    color(BLACK,WHITE,XOR);
-                    line(tool_start_x, tool_start_y, cursor_8u_x, cursor_8u_y);
-                }
-            }
+            // Cancel all drawing
+            app_state.tool_currently_drawing = false;
+            app_state.draw_tool_using_b_button_action = false;
+            tool_undo_snapshot_taken = false;
+        }
+        else if (current_action == DRAW_ACTION_NEW_DRAW_POSITION) {
+            // If moved, update the preview to the new position, XOR draw so it can be un-drawn later
+            color(BLACK,WHITE,XOR);
+            line(tool_start_x, tool_start_y, cursor_8u_x, cursor_8u_y);
         }
     }
 }
 
 
+// Used for when a tool is canceled and there is an active preview pending
+static void draw_tool_rect_finalize_last_preview(void) {
+    // Undraw last preview
+    color(BLACK,WHITE,XOR);
+    box(tool_start_x, tool_start_y, app_state.draw_cursor_8u_last_x, app_state.draw_cursor_8u_last_y, tool_fillstyle);
+
+    // Take undo snapshot
+    drawing_take_undo_snapshot();
+
+    // Draw finalized version
+    drawing_set_to_main_colors();
+    box(tool_start_x, tool_start_y, app_state.draw_cursor_8u_last_x, app_state.draw_cursor_8u_last_y, tool_fillstyle);
+}
+
+
 static void draw_tool_rect(uint8_t cursor_8u_x, uint8_t cursor_8u_y) {
 
-    if (tool_currently_drawing == false) {
+    if (app_state.tool_currently_drawing == false) {
 
         // Start drawing a rect
         if (KEY_TICKED(DRAW_MAIN_BUTTON)) {
@@ -265,54 +274,47 @@ static void draw_tool_rect(uint8_t cursor_8u_x, uint8_t cursor_8u_y) {
 
             // Set rect starting point
             app_state.draw_tool_using_b_button_action = true;
-            tool_currently_drawing = true;
+            app_state.tool_currently_drawing = true;
         }
 
     } else {
         // rect drawing is active, currently previewing position
 
-        // Un-draw the rect from the last frame (XOR)
-        // But only if the cursor moved, so that it remains visible otherwise
-        bool new_draw_position = false;
-        if ((cursor_8u_x != app_state.draw_cursor_8u_last_x) || (cursor_8u_y !=app_state.draw_cursor_8u_last_y)) {
+        uint8_t current_action = DRAW_ACTION_IDLE;
+        if      (KEY_TICKED(DRAW_MAIN_BUTTON))   current_action = DRAW_ACTION_FINALIZE;
+        else if (KEY_TICKED(DRAW_CANCEL_BUTTON)) current_action = DRAW_ACTION_CANCEL;
+        else if ((cursor_8u_x != app_state.draw_cursor_8u_last_x) ||
+                 (cursor_8u_y !=app_state.draw_cursor_8u_last_y)) current_action = DRAW_ACTION_NEW_DRAW_POSITION;
+
+
+        // Un-draw from the last frame (XOR)
+        // But only if the cursor moved (so it remains visible), it's being canceled, or being finalized (to take a clean undo snapshot)
+        if (current_action != DRAW_ACTION_IDLE) {
             color(BLACK,WHITE,XOR);
             box(tool_start_x, tool_start_y, app_state.draw_cursor_8u_last_x, app_state.draw_cursor_8u_last_y, tool_fillstyle);
-            new_draw_position = true;
         }
 
-        // If finalizing the rect is requested, draw it normally
-        if (KEY_TICKED(DRAW_MAIN_BUTTON)) {
-            // Finalize the rect
+        // If finalizing is requested, draw it normally
+        if (current_action == DRAW_ACTION_FINALIZE) {
+            // Finalize
+            drawing_take_undo_snapshot();
+
             drawing_set_to_main_colors();
             box(tool_start_x, tool_start_y, cursor_8u_x, cursor_8u_y, tool_fillstyle);
 
             app_state.draw_tool_using_b_button_action = false;
-            tool_currently_drawing = false;
+            app_state.tool_currently_drawing = false;
         }
-        else {
-            // Otherwise still being actively drawn
+        else if (current_action == DRAW_ACTION_CANCEL) {
 
-            // B Button cancels drawing the current one
-            if (KEY_TICKED(DRAW_CANCEL_BUTTON)) {
-
-                // Cancel all drawing
-                tool_currently_drawing = false;
-                app_state.draw_tool_using_b_button_action = false;
-
-                // If it's the same position as before then need to undraw to cancel
-                if (!new_draw_position) {
-                    color(BLACK,WHITE,XOR);
-                    box(tool_start_x, tool_start_y, app_state.draw_cursor_8u_last_x, app_state.draw_cursor_8u_last_y, tool_fillstyle);
-                }
-            }
-            else {
-                // If moved, update the preview to the new position
-                if (new_draw_position) {
-                    // Again, XOR draw so it can be un-drawn later
-                    color(BLACK,WHITE,XOR);
-                    box(tool_start_x, tool_start_y, cursor_8u_x, cursor_8u_y, tool_fillstyle);
-                }
-            }
+            // Cancel all drawing
+            app_state.tool_currently_drawing = false;
+            app_state.draw_tool_using_b_button_action = false;
+        }
+        else if (current_action == DRAW_ACTION_NEW_DRAW_POSITION) {
+            // If moved, update the preview to the new position, XOR draw so it can be un-drawn later
+            color(BLACK,WHITE,XOR);
+            box(tool_start_x, tool_start_y, cursor_8u_x, cursor_8u_y, tool_fillstyle);
         }
     }
 }
@@ -346,13 +348,26 @@ static uint8_t get_radius(uint8_t cursor_8u_x, uint8_t cursor_8u_y) {
 }
 
 
+static void draw_tool_circle_finalize_last_preview(void) {
+    // Undraw last preview
+    color(BLACK,WHITE,XOR);
+    circle(tool_start_x, tool_start_y, get_radius(app_state.draw_cursor_8u_last_x, app_state.draw_cursor_8u_last_y), tool_fillstyle);
+
+    // Take undo snapshot
+    drawing_take_undo_snapshot();
+
+    // Draw finalized version
+    drawing_set_to_main_colors();
+    circle(tool_start_x, tool_start_y, get_radius(app_state.draw_cursor_8u_last_x, app_state.draw_cursor_8u_last_y), tool_fillstyle);
+}
+
+
 static void draw_tool_circle(uint8_t cursor_8u_x, uint8_t cursor_8u_y) {
 
-    if (tool_currently_drawing == false) {
+    if (app_state.tool_currently_drawing == false) {
 
         // Start drawing
         if (KEY_TICKED(DRAW_MAIN_BUTTON)) {
-
             // Block starting a circle on any edge of the drawing area
             // since radius of 1+ would spill into the UI area
             if ((cursor_8u_x != IMG_X_START) && (cursor_8u_x != IMG_X_END) &&
@@ -366,55 +381,49 @@ static void draw_tool_circle(uint8_t cursor_8u_x, uint8_t cursor_8u_y) {
 
                 // Set starting point
                 app_state.draw_tool_using_b_button_action = true;
-                tool_currently_drawing = true;
+                app_state.tool_currently_drawing = true;
             }
         }
 
     } else {
         // Drawing is active, currently previewing position
 
+
+        uint8_t current_action = DRAW_ACTION_IDLE;
+        if      (KEY_TICKED(DRAW_MAIN_BUTTON))   current_action = DRAW_ACTION_FINALIZE;
+        else if (KEY_TICKED(DRAW_CANCEL_BUTTON)) current_action = DRAW_ACTION_CANCEL;
+        else if ((cursor_8u_x != app_state.draw_cursor_8u_last_x) ||
+                 (cursor_8u_y !=app_state.draw_cursor_8u_last_y)) current_action = DRAW_ACTION_NEW_DRAW_POSITION;
+
+
         // Un-draw from the last frame (XOR)
-        // But only if the cursor moved, so that it remains visible otherwise
-        bool new_draw_position = false;
-        if ((cursor_8u_x != app_state.draw_cursor_8u_last_x) || (cursor_8u_y !=app_state.draw_cursor_8u_last_y)) {
+        // But only if the cursor moved (so it remains visible), it's being canceled, or being finalized (to take a clean undo snapshot)
+        if (current_action != DRAW_ACTION_IDLE) {
             color(BLACK,WHITE,XOR);
             circle(tool_start_x, tool_start_y, get_radius(app_state.draw_cursor_8u_last_x, app_state.draw_cursor_8u_last_y), tool_fillstyle);
-            new_draw_position = true;
         }
 
         // If finalizing is requested, draw it normally
-        if (KEY_TICKED(DRAW_MAIN_BUTTON)) {
+        if (current_action == DRAW_ACTION_FINALIZE) {
             // Finalize
+            drawing_take_undo_snapshot();
+
             drawing_set_to_main_colors();
             circle(tool_start_x, tool_start_y, get_radius(cursor_8u_x, cursor_8u_y), tool_fillstyle);
 
             app_state.draw_tool_using_b_button_action = false;
-            tool_currently_drawing = false;
+            app_state.tool_currently_drawing = false;
         }
-        else {
-            // Otherwise still being actively drawn
+        else if (current_action == DRAW_ACTION_CANCEL) {
 
-            // B Button cancels drawing the current one
-            if (KEY_TICKED(DRAW_CANCEL_BUTTON)) {
-
-                // Cancel all drawing
-                tool_currently_drawing = false;
-                app_state.draw_tool_using_b_button_action = false;
-
-                // If it's the same position as before then need to undraw to cancel
-                if (!new_draw_position) {
-                    color(BLACK,WHITE,XOR);
-                    circle(tool_start_x, tool_start_y, get_radius(app_state.draw_cursor_8u_last_x, app_state.draw_cursor_8u_last_y), tool_fillstyle);
-                }
-            }
-            else {
-                // If moved, update the preview to the new position
-                if (new_draw_position) {
-                    // Again, XOR draw so it can be un-drawn later
-                    color(BLACK,WHITE,XOR);
-                    circle(tool_start_x, tool_start_y, get_radius(cursor_8u_x, cursor_8u_y), tool_fillstyle);
-                }
-            }
+            // Cancel all drawing
+            app_state.tool_currently_drawing = false;
+            app_state.draw_tool_using_b_button_action = false;
+        }
+        else if (current_action == DRAW_ACTION_NEW_DRAW_POSITION) {
+            // If moved, update the preview to the new position, XOR draw so it can be un-drawn later
+            color(BLACK,WHITE,XOR);
+            circle(tool_start_x, tool_start_y, get_radius(cursor_8u_x, cursor_8u_y), tool_fillstyle);
         }
     }
 }
@@ -423,6 +432,12 @@ static void draw_tool_circle(uint8_t cursor_8u_x, uint8_t cursor_8u_y) {
 static void draw_tool_eraser(uint8_t cursor_8u_x, uint8_t cursor_8u_y) {
 
     if (KEY_PRESSED(DRAW_MAIN_BUTTON)) {
+        // Take a undo snapshot only at the start of a drawing segment
+        if (tool_undo_snapshot_taken == false) {
+            drawing_take_undo_snapshot();
+            tool_undo_snapshot_taken = true;
+        }
+
         uint8_t end_x = cursor_8u_x + (TOOL_ERASER_SIZE - 1u);
         uint8_t end_y = cursor_8u_y + (TOOL_ERASER_SIZE - 1u);
 
@@ -436,6 +451,10 @@ static void draw_tool_eraser(uint8_t cursor_8u_x, uint8_t cursor_8u_y) {
         else
             box(cursor_8u_x, cursor_8u_y, end_x, end_y, M_FILL);
     }
+    else if (KEY_PRESSED(DRAW_MAIN_BUTTON) == false) {
+        tool_undo_snapshot_taken = false;
+    }
+
 }
 
 
@@ -476,7 +495,10 @@ static bool flood_check_fillable(uint8_t x, uint8_t y) {
 // Heckbert, Paul S (1990). "IV.10: A Seed Fill Algorithm"
 static void draw_tool_floodfill(uint8_t x, uint8_t y) {
 
-    if (KEY_PRESSED(DRAW_MAIN_BUTTON)) {
+    if (KEY_TICKED(DRAW_MAIN_BUTTON)) {
+
+        drawing_take_undo_snapshot();
+
         drawing_set_to_main_colors();
 
         // EMU_printf("Start: %hu, %hu\n", (uint8_t)x, (uint8_t)y);

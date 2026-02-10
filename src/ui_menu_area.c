@@ -11,6 +11,7 @@
 #include "draw.h"
 #include "ui_main.h"
 #include "ui_menu_area.h"
+#include "save_and_undo.h"
 
 #include <ui_main_bg.h>      // BG APA style image
 #include <ui_main_bg_cde.h>  // BG APA style image  // CDE alternate theme
@@ -30,6 +31,7 @@ const uint8_t menu_tools[DRAW_TOOL_COUNT] = {
 static void ui_menu_tools(uint8_t cursor_8u_y);
 static void ui_menu_file(uint8_t cursor_8u_y);
 static void ui_swap_active_color(void);
+static void ui_perform_undo(void);
 
 // Draws the paint working area
 void ui_redraw_menus_all(void) NONBANKED {
@@ -87,16 +89,16 @@ void ui_handle_menu_area(uint8_t cursor_8u_x, uint8_t cursor_8u_y) BANKED {
             drawing_clear();
         }
     }
-    else if ((cursor_8u_x >= CLEAR_BUTTON_X_START) && (cursor_8u_x < CLEAR_BUTTON_X_END) &&
-             (cursor_8u_y >= CLEAR_BUTTON_Y_START) && (cursor_8u_y < CLEAR_BUTTON_Y_END)) {
-        if (KEY_TICKED(UI_ACTION_BUTTON)) {
-            drawing_clear();
-        }
-    }
     else if ((cursor_8u_x >= COLOR_CHANGE_BUTTON_X_START) && (cursor_8u_x < COLOR_CHANGE_BUTTON_X_END) &&
              (cursor_8u_y >= COLOR_CHANGE_BUTTON_Y_START) && (cursor_8u_y < COLOR_CHANGE_BUTTON_Y_END)) {
         if (KEY_TICKED(UI_ACTION_BUTTON)) {
             ui_swap_active_color();
+        }
+    }
+    else if ((cursor_8u_x >= UNDO_BUTTON_X_START) && (cursor_8u_x < UNDO_BUTTON_X_END) &&
+             (cursor_8u_y >= UNDO_BUTTON_Y_START) && (cursor_8u_y < UNDO_BUTTON_Y_END)) {
+        if (KEY_TICKED(UI_ACTION_BUTTON)) {
+            ui_perform_undo();
         }
     }
 }
@@ -155,6 +157,8 @@ static void ui_menu_file(uint8_t cursor_8u_y) {
 
         switch (file_menu_item) {
             case FILE_MENU_LOAD:
+                // Take undo snapshot first, in case user changes their mind
+                drawing_take_undo_snapshot();
                 drawing_restore_from_sram(SRAM_BANK_DRAWING_SAVES, app_state.save_slot_current);
                 break;
 
@@ -212,5 +216,10 @@ static void ui_swap_active_color(void) {
 
     color(app_state.draw_color_main, app_state.draw_color_main, SOLID);
     box(COLOR_MAIN_X_START, COLOR_MAIN_Y_START, COLOR_MAIN_X_END, COLOR_MAIN_Y_END, M_FILL);
+}
+
+
+static void ui_perform_undo(void) {
+    drawing_restore_undo_snapshot();
 }
 

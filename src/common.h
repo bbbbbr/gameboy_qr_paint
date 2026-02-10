@@ -22,9 +22,17 @@
 #define FILE_MENU_BG_COLOR         (ALL_MENUS_BG_COLOR)
 #define FILE_MENU_HIGHLIGHT_COLOR  (DKGREY)
 
-#define DRAWING_SAVE_SLOT_MIN   0u
-#define DRAWING_SAVE_SLOT_MAX   2u
-#define DRAWING_SAVE_SLOT_COUNT ((DRAW_SAVE_SLOT_MAX - DRAW_SAVE_SLOT_MIN) + 1u)
+#define DRAW_SAVE_SLOT_MIN     0u
+#define DRAW_SAVE_SLOT_MAX     2u
+#define DRAW_SAVE_SLOT_COUNT   ((DRAW_SAVE_SLOT_MAX - DRAW_SAVE_SLOT_MIN) + 1u)
+#define DRAW_SAVE_SLOT_DEFAULT (DRAW_SAVE_SLOT_MIN)
+
+// Same deal as Save slots, different Cart SRAM Bank
+#define DRAW_UNDO_SLOT_MIN     (DRAW_SAVE_SLOT_MIN)
+#define DRAW_UNDO_SLOT_MAX     (DRAW_SAVE_SLOT_MAX)
+#define DRAW_UNDO_SLOT_COUNT   ((DRAW_UNDO_SLOT_MAX - DRAW_UNDO_SLOT_MIN) + 1u)
+#define DRAW_UNDO_SLOT_DEFAULT (DRAW_UNDO_SLOT_MIN)
+#define DRAW_UNDO_COUNT_NONE   (0u)
 
 #define DRAW_COLOR_MAIN_DEFAULT (BLACK)
 #define DRAW_COLOR_BG_DEFAULT   (WHITE)
@@ -36,7 +44,8 @@
 
 #define SRAM_BANK_CALC_BUFFER        (SRAM_BANK_0)  // Keep [PNG / Base64] Calc buffer in first SRAM bank so that image apps can detect it as PNG format
 #define SRAM_BANK_DRAWING_SAVES      (SRAM_BANK_1)
-#define SRAM_BANK_CUR_DRAWING_CACHE  (SRAM_BANK_2)
+#define SRAM_BANK_UNDO_SNAPSHOTS_LO  (SRAM_BANK_2)
+#define SRAM_BANK_UNDO_SNAPSHOTS_HI  (SRAM_BANK_3)
 
 // Current QRCode sizing estimates
 // - 1bpp Image Max = 1282 - 6  palette (@ 2 col) = 1276 Bytes * 8 pixels per byte = 10208 Pixels -> fits: 104 x 96[tiles:13x12] = 9984
@@ -155,8 +164,12 @@ enum {
 
 typedef struct app_state_t {
 
-    // == Saves ==
-    uint8_t  save_slot_current;
+    // == Save and undo ==
+    uint8_t save_slot_current;
+
+    uint8_t undo_count;
+    uint8_t undo_slot_current;
+
 
     // == Cursor ==
     uint16_t cursor_x;
@@ -180,6 +193,7 @@ typedef struct app_state_t {
     uint8_t draw_cursor_8u_last_y;
 
     bool    draw_tool_using_b_button_action;
+    bool    tool_currently_drawing;
 
     uint8_t draw_color_main;
     uint8_t draw_color_bg;
