@@ -94,7 +94,7 @@ all: $(TARGETS)
 # Use png2asset to convert the png into C formatted metasprite data
 # Convert metasprite .pngs in res/ -> .c files in obj/<platform ext>/src/
 $(RESOBJSRC)/%.c:	$(RESDIR)/%.png
-	$(PNG2ASSET) $< `cat <$<.meta 2>/dev/null` -c $@
+	$(PNG2ASSET) $< -use_metafile -c $@
 
 # Compile the pngs that were converted to .c files
 # .c files in obj/res/ -> .o files in obj/
