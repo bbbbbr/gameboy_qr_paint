@@ -174,6 +174,8 @@ static inline bool ui_check_cursor_in_draw_area(void) {
 
 
 static inline void ui_cursor_teleport_update(bool cursor_in_drawing, uint16_t cursor_last_x, uint16_t cursor_last_y) {
+    cursor_last_x;  // Warning quell
+    cursor_last_y;  // Warning quell
 
     // Check if cursor needs an auto-teleport update due to manually navigating between areas
     if ((cursor_in_drawing == false) && (app_state.cursor_teleport_zone == CURSOR_TELEPORT_DRAWING)) {
@@ -186,10 +188,16 @@ static inline void ui_cursor_teleport_update(bool cursor_in_drawing, uint16_t cu
         // Use ..last.. since the position to save is where it was BEFORE it changed zones
         // app_state.cursor_draw_saved_x = cursor_last_x;
         // app_state.cursor_draw_saved_y = cursor_last_y;
-        if (cursor_last_x < (DEVICE_SCREEN_WIDTH / 2u))
-            app_state.cursor_teleport_zone = CURSOR_TELEPORT_MENU_LEFT;
-        else
-            app_state.cursor_teleport_zone = CURSOR_TELEPORT_MENU_RIGHT;
+
+        // When manually moving out of drawing to a menu, always set the zone to Max
+        // so that the next press will return to drawing. 
+        // WARNING: If saving zone position is re-enabled then the version below should be used isntead
+        app_state.cursor_teleport_zone = CURSOR_TELEPORT_MAX;
+        //
+        // if (cursor_last_x < CURSOR_8U_TO_16U(DEVICE_SCREEN_PX_WIDTH / 2u))
+        //     app_state.cursor_teleport_zone = CURSOR_TELEPORT_MENU_LEFT;
+        // else
+        //     app_state.cursor_teleport_zone = CURSOR_TELEPORT_MENU_RIGHT;
         update_cursor_style_to_menu();
     }
     else if ((cursor_in_drawing == true) && (app_state.cursor_teleport_zone != CURSOR_TELEPORT_DRAWING)) {
