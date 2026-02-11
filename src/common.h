@@ -124,8 +124,9 @@ enum {
     CURSOR_TELEPORT_MIN,
 
     CURSOR_TELEPORT_DRAWING = CURSOR_TELEPORT_MIN,
-    CURSOR_TELEPORT_MENUS,
-    CURSOR_TELEPORT_MAX = CURSOR_TELEPORT_MENUS,
+    CURSOR_TELEPORT_MENU_LEFT,
+    CURSOR_TELEPORT_MENU_RIGHT,
+    CURSOR_TELEPORT_MAX = CURSOR_TELEPORT_MENU_RIGHT,
 
     CURSOR_TELEPORT_DEFAULT = CURSOR_TELEPORT_DRAWING,
 };
@@ -183,8 +184,10 @@ typedef struct app_state_t {
 
     uint16_t cursor_draw_saved_x;
     uint16_t cursor_draw_saved_y;
-    uint16_t cursor_menus_saved_x;
-    uint16_t cursor_menus_saved_y;
+    uint16_t cursor_menu_left_saved_x;
+    uint16_t cursor_menu_left_saved_y;
+    uint16_t cursor_menu_right_saved_x;
+    uint16_t cursor_menu_right_saved_y;
 
     uint8_t  cursor_speed_mode;
     uint8_t  cursor_teleport_zone;

@@ -31,8 +31,11 @@ void app_state_reset(void) BANKED {
     app_state.cursor_draw_saved_x = app_state.cursor_x;
     app_state.cursor_draw_saved_y = app_state.cursor_y;
 
-    app_state.cursor_menus_saved_x = CURSOR_8U_TO_16U(DEVICE_SCREEN_PX_WIDTH / 10);
-    app_state.cursor_menus_saved_y = CURSOR_8U_TO_16U(DEVICE_SCREEN_PX_HEIGHT / 2);
+    app_state.cursor_menu_left_saved_x = CURSOR_8U_TO_16U(DEVICE_SCREEN_PX_WIDTH / 10);
+    app_state.cursor_menu_left_saved_y = CURSOR_8U_TO_16U(DEVICE_SCREEN_PX_HEIGHT / 2);
+
+    app_state.cursor_menu_right_saved_x = CURSOR_8U_TO_16U(DEVICE_SCREEN_PX_WIDTH - (DEVICE_SCREEN_PX_WIDTH / 10));
+    app_state.cursor_menu_right_saved_y = CURSOR_8U_TO_16U(DEVICE_SCREEN_PX_HEIGHT / 2);
     
     // Drawing / Tools
     app_state.draw_cursor_8u_last_x = CURSOR_POS_UNSET_8U;

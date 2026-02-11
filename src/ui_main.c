@@ -98,10 +98,18 @@ static void ui_cursor_teleport_save_zone(uint8_t teleport_zone_to_save) {
             app_state.cursor_draw_saved_y = app_state.cursor_y;
             break;
 
-        case CURSOR_TELEPORT_MENUS:
-            app_state.cursor_menus_saved_x = app_state.cursor_x;
-            app_state.cursor_menus_saved_y = app_state.cursor_y;
-            break;
+        // Changed behavior to not save menu positions (commented out below),
+        // so now cursor always snaps to centers of the side menus
+
+        // case CURSOR_TELEPORT_MENU_LEFT:
+        //     app_state.cursor_menu_left_saved_x = app_state.cursor_x;
+        //     app_state.cursor_menu_left_saved_y = app_state.cursor_y;
+        //     break;
+
+        // case CURSOR_TELEPORT_MENU_RIGHT:
+        //     app_state.cursor_menu_right_saved_x = app_state.cursor_x;
+        //     app_state.cursor_menu_right_saved_y = app_state.cursor_y;
+        //     break;
     }
 }    
 
@@ -125,10 +133,15 @@ void ui_cycle_cursor_teleport(void) BANKED {
             update_cursor_style_to_draw();
             break;
 
-    // TODO: UI: Cursor: Maybe teleport to menus should always snap to center of menu area instead of remembering, it might be more annoying in practice
-        case CURSOR_TELEPORT_MENUS:
-            app_state.cursor_x = app_state.cursor_menus_saved_x;
-            app_state.cursor_y = app_state.cursor_menus_saved_y;
+        case CURSOR_TELEPORT_MENU_LEFT:
+            app_state.cursor_x = app_state.cursor_menu_left_saved_x;
+            app_state.cursor_y = app_state.cursor_menu_left_saved_y;
+            update_cursor_style_to_menu();
+            break;
+
+        case CURSOR_TELEPORT_MENU_RIGHT:
+            app_state.cursor_x = app_state.cursor_menu_right_saved_x;
+            app_state.cursor_y = app_state.cursor_menu_right_saved_y;
             update_cursor_style_to_menu();
             break;
     }
@@ -164,18 +177,35 @@ static inline void ui_cursor_teleport_update(bool cursor_in_drawing, uint16_t cu
 
     // Check if cursor needs an auto-teleport update due to manually navigating between areas
     if ((cursor_in_drawing == false) && (app_state.cursor_teleport_zone == CURSOR_TELEPORT_DRAWING)) {
+        // When moving the cursor out of the drawing area and into the menu, don't save
+        // the last drawing cursor position since it will just be right on the edge.
+        // Instead when teleporting back it will pop to the last teleported-out drawing
+        // position which feels more intuitive.
+
         // Save position in drawing and change state to menu area
         // Use ..last.. since the position to save is where it was BEFORE it changed zones
-        app_state.cursor_draw_saved_x = cursor_last_x;
-        app_state.cursor_draw_saved_y = cursor_last_y;
-        app_state.cursor_teleport_zone = CURSOR_TELEPORT_MENUS;
+        // app_state.cursor_draw_saved_x = cursor_last_x;
+        // app_state.cursor_draw_saved_y = cursor_last_y;
+        if (cursor_last_x < (DEVICE_SCREEN_WIDTH / 2u))
+            app_state.cursor_teleport_zone = CURSOR_TELEPORT_MENU_LEFT;
+        else
+            app_state.cursor_teleport_zone = CURSOR_TELEPORT_MENU_RIGHT;
         update_cursor_style_to_menu();
     }
-    else if ((cursor_in_drawing == true) && (app_state.cursor_teleport_zone == CURSOR_TELEPORT_MENUS)) {
+    else if ((cursor_in_drawing == true) && (app_state.cursor_teleport_zone != CURSOR_TELEPORT_DRAWING)) {
+
+        // As noted in ui_cursor_teleport_save_zone(), no longer saving cursor position
+        // in menu zones
+
         // Save position in drawing and change state to menu area
         // Use ..last.. since the position to save is where it was BEFORE it changed zones
-        app_state.cursor_menus_saved_x = cursor_last_x;
-        app_state.cursor_menus_saved_y = cursor_last_y;
+        //  if (cursor_last_x < (DEVICE_SCREEN_WIDTH / 2u)) {
+        //     app_state.cursor_menu_left_saved_x = cursor_last_x;
+        //     app_state.cursor_menu_left_saved_y = cursor_last_y;
+        // } else {
+        //     app_state.cursor_menu_right_saved_x = cursor_last_x;
+        //     app_state.cursor_menu_right_saved_y = cursor_last_y;
+        // }
         app_state.cursor_teleport_zone = CURSOR_TELEPORT_DRAWING;
         update_cursor_style_to_draw();
     }
