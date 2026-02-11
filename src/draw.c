@@ -31,6 +31,8 @@ static void draw_tool_circle(uint8_t cursor_8u_x, uint8_t cursor_8u_y);
 static void draw_tool_eraser(uint8_t cursor_8u_x, uint8_t cursor_8u_y);
 static void draw_tool_floodfill(uint8_t cursor_8u_x, uint8_t cursor_8u_y);
 
+// Should now only be (indirectly) called by ui_redraw_after_qrcode()
+// Can be remove if QRCode is changed from always-available START button press to a menu icon (that can't be accessed when tools are actively drawing)
 static void draw_tool_line_finalize_last_preview(void);
 static void draw_tool_rect_finalize_last_preview(void);
 static void draw_tool_circle_finalize_last_preview(void);
@@ -106,6 +108,8 @@ void draw_update(uint8_t cursor_8u_x, uint8_t cursor_8u_y) BANKED {
 }
 
 
+// Should now only be called by ui_redraw_after_qrcode()
+//
 // Clear any pending tool behavior and state
 // May be called when switching tools/etc
 void draw_tools_cancel_and_reset(void) BANKED {
@@ -137,17 +141,24 @@ void draw_tools_cancel_and_reset(void) BANKED {
 
 static void draw_tool_pencil(uint8_t cursor_8u_x, uint8_t cursor_8u_y) {
 
-    if (KEY_PRESSED(DRAW_MAIN_BUTTON)) {
+    // Start drawing
+    if (KEY_TICKED(DRAW_MAIN_BUTTON)) {
         // Take a undo snapshot only at the start of a drawing segment
         if (tool_undo_snapshot_taken == false) {
             drawing_take_undo_snapshot();
             tool_undo_snapshot_taken = true;
         }
-
-        plot_point(cursor_8u_x, cursor_8u_y);
+        app_state.tool_currently_drawing = true;
     }
-    else if (KEY_PRESSED(DRAW_MAIN_BUTTON) == false) {
+    else if (KEY_RELEASED(DRAW_MAIN_BUTTON)) {
+        // End Drawing
         tool_undo_snapshot_taken = false;
+        app_state.tool_currently_drawing = false;
+    }
+
+    // Draw if active
+    if (app_state.tool_currently_drawing) {
+        plot_point(cursor_8u_x, cursor_8u_y);
     }
 }
 
@@ -431,13 +442,24 @@ static void draw_tool_circle(uint8_t cursor_8u_x, uint8_t cursor_8u_y) {
 
 static void draw_tool_eraser(uint8_t cursor_8u_x, uint8_t cursor_8u_y) {
 
-    if (KEY_PRESSED(DRAW_MAIN_BUTTON)) {
+
+    // Start drawing
+    if (KEY_TICKED(DRAW_MAIN_BUTTON)) {
         // Take a undo snapshot only at the start of a drawing segment
         if (tool_undo_snapshot_taken == false) {
             drawing_take_undo_snapshot();
             tool_undo_snapshot_taken = true;
         }
+        app_state.tool_currently_drawing = true;
+    }
+    else if (KEY_RELEASED(DRAW_MAIN_BUTTON)) {
+        // End Drawing
+        tool_undo_snapshot_taken = false;
+        app_state.tool_currently_drawing = false;
+    }
 
+    // Draw if active
+    if (app_state.tool_currently_drawing) {
         uint8_t end_x = cursor_8u_x + (TOOL_ERASER_SIZE - 1u);
         uint8_t end_y = cursor_8u_y + (TOOL_ERASER_SIZE - 1u);
 
@@ -451,10 +473,6 @@ static void draw_tool_eraser(uint8_t cursor_8u_x, uint8_t cursor_8u_y) {
         else
             box(cursor_8u_x, cursor_8u_y, end_x, end_y, M_FILL);
     }
-    else if (KEY_PRESSED(DRAW_MAIN_BUTTON) == false) {
-        tool_undo_snapshot_taken = false;
-    }
-
 }
 
 

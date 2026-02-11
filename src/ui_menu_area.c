@@ -82,10 +82,11 @@ void ui_handle_menu_area(uint8_t cursor_8u_x, uint8_t cursor_8u_y) BANKED {
 
     // TODO: Could partition the screen into left/Right to reduce the number of collision box tests
 
-    // TODO: Sort of a hack, but cancel any pending tool operations if a button is pressed in the menu area
-    if (KEY_TICKED(UI_ACTION_BUTTON)) {
-        draw_tools_cancel_and_reset();
-    }
+    // TODO: REMOVABLE: These shouldn't be needed anymore now that cursor is locked in the draw area while drawing is active
+    // // TODO: Sort of a hack, but cancel any pending tool operations if a button is pressed in the menu area
+    // if (KEY_TICKED(UI_ACTION_BUTTON)) {
+    //     draw_tools_cancel_and_reset();
+    // }
 
     // Tools Menu
     if ((cursor_8u_x >= TOOLS_MENU_X_START) && (cursor_8u_x < TOOLS_MENU_X_END) &&

@@ -21,6 +21,7 @@
 static void ui_cursor_teleport_save_zone(uint8_t teleport_zone_to_save);
 static inline void ui_cursor_update(uint8_t cursor_8u_x, uint8_t cursor_8u_y);
 static inline bool ui_check_cursor_in_draw_area(void);
+static inline void ui_clamp_cursor_to_draw_area(void);
 static inline void ui_cursor_teleport_update(bool cursor_in_drawing, uint16_t cursor_last_x, uint16_t cursor_last_y);
 static void ui_process_input(bool cursor_in_drawing);
 
@@ -173,6 +174,16 @@ static inline bool ui_check_cursor_in_draw_area(void) {
 }
 
 
+static inline void ui_clamp_cursor_to_draw_area(void) {
+
+    // TODO: May need an exception here for line or circle drawing to allow cursor control past drawing area
+    if (app_state.cursor_x < CURSOR_8U_TO_16U(IMG_X_START)) app_state.cursor_x = CURSOR_8U_TO_16U(IMG_X_START);
+    if (app_state.cursor_x > CURSOR_8U_TO_16U(IMG_X_END))   app_state.cursor_x = CURSOR_8U_TO_16U(IMG_X_END);
+    if (app_state.cursor_y < CURSOR_8U_TO_16U(IMG_Y_START)) app_state.cursor_y = CURSOR_8U_TO_16U(IMG_Y_START);
+    if (app_state.cursor_y > CURSOR_8U_TO_16U(IMG_Y_END))   app_state.cursor_y = CURSOR_8U_TO_16U(IMG_Y_END);
+}
+
+
 static inline void ui_cursor_teleport_update(bool cursor_in_drawing, uint16_t cursor_last_x, uint16_t cursor_last_y) {
     cursor_last_x;  // Warning quell
     cursor_last_y;  // Warning quell
@@ -269,6 +280,11 @@ static void ui_process_input(bool cursor_in_drawing) {
 
             if      (KEYS() & J_UP)   { if (app_state.cursor_y > CURSOR_SPEED_FAST) app_state.cursor_y -= CURSOR_SPEED_FAST; }
             else if (KEYS() & J_DOWN) { if (app_state.cursor_y < (SCREEN_Y_MAX_16U - CURSOR_SPEED_FAST)) app_state.cursor_y += CURSOR_SPEED_FAST; }
+        }
+
+        // Clamp cursor to drawing area if a tool is actively drawing
+        if (app_state.tool_currently_drawing) {
+            ui_clamp_cursor_to_draw_area();
         }
     }
 
