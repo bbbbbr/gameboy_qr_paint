@@ -21,13 +21,6 @@
 
 #pragma bank 255  // Autobanked
 
-
-#define UNDO_BUTTON_TILE_DISABLED (0u * TILE_SZ_BYTES)
-#define UNDO_BUTTON_TILE_ENABLED  (1u * TILE_SZ_BYTES)
-
-#define UNDO_BUTTON_TILE_ID       94u // Index of tile in apa image mode
-#define UNDO_BUTTON_VRAM_ADDR     (_VRAM9000 + (UNDO_BUTTON_TILE_ID * TILE_SZ_BYTES)) // Index of tile in apa image mode
-
 const uint8_t menu_tools[DRAW_TOOL_COUNT] = {
     DRAW_TOOL_PENCIL,
     DRAW_TOOL_LINE,
@@ -64,10 +57,13 @@ void ui_redraw_menus_all(void) NONBANKED {
     // Redraw various menus and their state
     ui_menu_tools_draw_highlight(app_state.drawing_tool, TOOLS_MENU_HIGHLIGHT_COLOR);
     ui_menu_file_draw_highlight(app_state.save_slot_current, FILE_MENU_HIGHLIGHT_COLOR);
+
     if (app_state.undo_count > DRAW_UNDO_COUNT_NONE)
         ui_undo_button_enable();
     else
         ui_undo_button_disable();
+
+    ui_cursor_speed_redraw_indicator();
 
     DISPLAY_ON;
 
@@ -191,7 +187,7 @@ void ui_menu_file_draw_highlight(uint8_t num, uint8_t draw_color) BANKED {
 
     // Menu highlights start after Load button which is first/top
     num += FILE_MENU_START_OF_SAVE_SLOTS_OFFSET;
-    
+
     uint8_t x1 = (num * FILE_MENU_ITEM_WIDTH) + (FILE_MENU_X_START);
     uint8_t y1 = FILE_MENU_Y_START;
 
@@ -219,7 +215,9 @@ static void ui_menu_right(uint8_t cursor_8u_y) {
             case RIGHT_MENU_COLOR_SWAP: ui_swap_active_color();
                                         break;
             case RIGHT_MENU_WIDTH: break; // TODO
-            case RIGHT_MENU_SPEED: break; // TODO
+            case RIGHT_MENU_SPEED: ui_cursor_cycle_speed();
+                                   ui_cursor_speed_redraw_indicator();
+                                   break;
             case RIGHT_MENU_CLEAR: drawing_clear();
                                    break;
         }
@@ -259,6 +257,25 @@ void ui_undo_button_disable(void) NONBANKED {
 
     EMU_printf("disable undo\n");
 }
+
+
+// Copy tiles from ROM into vram to update the indicated cursor speed
+void ui_cursor_speed_redraw_indicator(void) NONBANKED {
+
+    uint8_t save_bank = CURRENT_BANK;
+    SWITCH_ROM(BANK(speed_button));
+
+    const uint8_t * p_tile_src = speed_button_tiles + (app_state.cursor_speed_mode * CURSOR_SPEED_IND_MODE_SZ_BYTES);
+
+    // Copy two rows of tiles
+    vmemcpy((uint8_t*)CURSOR_SPEED_IND_ROW1_VRAM_ADDR, p_tile_src, CURSOR_SPEED_IND_ROW_SZ_BYTES);
+
+    p_tile_src += CURSOR_SPEED_IND_ROW_SZ_BYTES;
+    vmemcpy((uint8_t*)CURSOR_SPEED_IND_ROW2_VRAM_ADDR, p_tile_src, CURSOR_SPEED_IND_ROW_SZ_BYTES);
+
+    SWITCH_ROM(save_bank);
+}
+
 
 static void ui_perform_undo(void) {
     drawing_restore_undo_snapshot();

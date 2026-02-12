@@ -1,6 +1,7 @@
 #ifndef UI_MAIN_AREA_H
 #define UI_MAIN_AREA_H
 
+#include <speed_button.h>
 
 #define UI_BOTTOM_BORDER_START 120u
 
@@ -64,6 +65,18 @@
     #define UNDO_BUTTON_SPR_X   ((RIGHT_MENU_X_START + 7u) + DEVICE_SPRITE_PX_OFFSET_X)
     #define UNDO_BUTTON_SPR_Y   ((RIGHT_MENU_Y_START + (RIGHT_MENU_UNDO * RIGHT_MENU_ITEM_HEIGHT) + 4u) + DEVICE_SPRITE_PX_OFFSET_Y)
 
+    // Speed Button (update handled in ui_main)
+    #define CURSOR_SPEED_IND_ROW1_TILE_ID       253u // Index of tile in apa image mode
+    #define CURSOR_SPEED_IND_ROW2_TILE_ID       273u
+    #define CURSOR_SPEED_IND_ROW1_VRAM_ADDR     (_VRAM8000 + (CURSOR_SPEED_IND_ROW1_TILE_ID * TILE_SZ_BYTES)) // Index of tile in apa image mode
+    #define CURSOR_SPEED_IND_ROW2_VRAM_ADDR     (_VRAM8000 + (CURSOR_SPEED_IND_ROW2_TILE_ID * TILE_SZ_BYTES)) // Index of tile in apa image mode
+
+    // Width and height are per-speed mode indicator sub-image
+    #define CURSOR_SPEED_IND_TILES_WIDTH         (speed_button_WIDTH / speed_button_TILE_W)
+    #define CURSOR_SPEED_IND_TILES_HEIGHT        ((speed_button_HEIGHT / speed_button_TILE_H) / CURSOR_SPEED_MODE_COUNT)
+    #define CURSOR_SPEED_IND_ROW_SZ_BYTES        (CURSOR_SPEED_IND_TILES_WIDTH * TILE_SZ_BYTES)
+    #define CURSOR_SPEED_IND_MODE_SZ_BYTES       ((CURSOR_SPEED_IND_TILES_WIDTH * CURSOR_SPEED_IND_TILES_HEIGHT) * TILE_SZ_BYTES)
+
 
 // ===== (BOTTOM) FILE MENU =====
 
@@ -92,5 +105,7 @@ void ui_menu_file_draw_highlight(uint8_t num, uint8_t draw_color) BANKED;
 
 void ui_undo_button_enable(void) NONBANKED;
 void ui_undo_button_disable(void) NONBANKED;
+
+void ui_cursor_speed_redraw_indicator(void) NONBANKED;
 
 #endif // UI_MAIN_AREA_H

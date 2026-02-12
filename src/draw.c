@@ -86,8 +86,6 @@ void draw_init(void) BANKED {
 // Expects UPDATE_KEYS() to have been called before each invocation
 void draw_update(uint8_t cursor_8u_x, uint8_t cursor_8u_y) BANKED {
 
-    if (KEY_TICKED(J_SELECT)) ui_cycle_cursor_speed();
-
     switch (app_state.drawing_tool) {
         case DRAW_TOOL_PENCIL: draw_tool_pencil(cursor_8u_x,cursor_8u_y);
             break;

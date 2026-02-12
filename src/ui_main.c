@@ -11,15 +11,17 @@
 #include "draw.h"
 #include "ui_main.h"
 #include "ui_menu_area.h"
+#include "sprites.h"
 
+// Image data
 #include <ui_main_bg.h>      // BG APA style image
 #include <ui_main_bg_cde.h>  // BG APA style image  // CDE alternate theme
-
-#include "sprites.h"
 #include <sprites_img.h>     // Cursor and other sprites
+#include <speed_button.h>
 
 #pragma bank 255  // Autobanked
 
+static void ui_cursor_speed_handle_input(void);
 static void ui_cursor_teleport_save_zone(uint8_t teleport_zone_to_save);
 static inline void ui_cursor_update(uint8_t cursor_8u_x, uint8_t cursor_8u_y);
 static inline bool ui_check_cursor_in_draw_area(void);
@@ -57,25 +59,29 @@ void ui_init(void) NONBANKED {
 
 void ui_update(void) BANKED {
 
-    // Split UI handling between drawing area and UI
-    // drawing area has different movement speed options than main UI area
-    ui_process_input( ui_check_cursor_in_draw_area() );
-
-    uint8_t cursor_8u_x = app_state.cursor_8u_cache_x;
-    uint8_t cursor_8u_y = app_state.cursor_8u_cache_y;
-
-    ui_cursor_update(cursor_8u_x, cursor_8u_y);
-
-    if ( ui_check_cursor_in_draw_area() ) {
-        draw_update(cursor_8u_x, cursor_8u_y);
-    } else {
-        ui_handle_menu_area(cursor_8u_x, cursor_8u_y);
-
-        // Restore default draw colors in case they changed during menu updates
-        // TODO: optimize: optionally only do this when changing between menu and drawing area instead of once per frame
-        drawing_set_to_main_colors();
+    if (KEY_PRESSED(UI_SHORTCUT_BUTTON)) {
+        ui_cursor_speed_handle_input();
     }
+    else {
+        // Split UI handling between drawing area and UI
+        // drawing area has different movement speed options than main UI area
+        ui_process_input( ui_check_cursor_in_draw_area() );
 
+        uint8_t cursor_8u_x = app_state.cursor_8u_cache_x;
+        uint8_t cursor_8u_y = app_state.cursor_8u_cache_y;
+
+        ui_cursor_update(cursor_8u_x, cursor_8u_y);
+
+        if ( ui_check_cursor_in_draw_area() ) {
+            draw_update(cursor_8u_x, cursor_8u_y);
+        } else {
+            ui_handle_menu_area(cursor_8u_x, cursor_8u_y);
+
+            // Restore default draw colors in case they changed during menu updates
+            // TODO: optimize: optionally only do this when changing between menu and drawing area instead of once per frame
+            drawing_set_to_main_colors();
+        }
+    }
 }
 
 
@@ -92,11 +98,27 @@ void ui_redraw_after_qrcode(void) BANKED {
 }
 
 
-void ui_cycle_cursor_speed(void) BANKED {
-
-    app_state.cursor_speed_mode++;
-    if (app_state.cursor_speed_mode > CURSOR_SPEED_MODE_MAX)
+// Used for clicking speed menu button
+void ui_cursor_cycle_speed(void) BANKED {
+    if (app_state.cursor_speed_mode == CURSOR_SPEED_MODE_MAX)
         app_state.cursor_speed_mode = CURSOR_SPEED_MODE_MIN;
+    else
+        app_state.cursor_speed_mode++;
+}
+
+
+static void ui_cursor_speed_handle_input(void) {
+
+    if (KEY_TICKED(SPEED_UP_BUTTON)) {        
+        if (app_state.cursor_speed_mode < CURSOR_SPEED_MODE_MAX)
+            app_state.cursor_speed_mode++;
+            ui_cursor_speed_redraw_indicator();
+    }
+    else if (KEY_TICKED(SPEED_DOWN_BUTTON)) {        
+        if (app_state.cursor_speed_mode > CURSOR_SPEED_MODE_MIN)
+            app_state.cursor_speed_mode--;
+            ui_cursor_speed_redraw_indicator();
+    }
 }
 
 
@@ -123,7 +145,7 @@ static void ui_cursor_teleport_save_zone(uint8_t teleport_zone_to_save) {
     }
 }    
 
-void ui_cycle_cursor_teleport(void) BANKED {
+void ui_cursor_cycle_teleport(void) BANKED {
 
     // Note: Three teleport zones feels too complicated right now, reducing down to two
 
@@ -241,7 +263,7 @@ static inline void ui_cursor_teleport_update(bool cursor_in_drawing, uint16_t cu
     // TODO: J_SELECT instead?
     // Check for request to teleport between menus/drawing
     if (KEY_TICKED(J_B) && (app_state.draw_tool_using_b_button_action == false))
-        ui_cycle_cursor_teleport();
+        ui_cursor_cycle_teleport();
 }
 
 
@@ -265,30 +287,25 @@ static void ui_process_input(bool cursor_in_drawing) {
     }
     else {
         // Drawing area cursor handling
-        uint8_t cursor_speed_mode = app_state.cursor_speed_mode;
-        if (cursor_speed_mode == CURSOR_SPEED_MODE_PIXELSTEP) {
+        uint16_t cursor_speed;
+        bool     continuous_move = true;
 
-            if      (KEY_TICKED(J_LEFT))  { if (app_state.cursor_x > CURSOR_SPEED_PIXELSTEP) app_state.cursor_x -= CURSOR_SPEED_PIXELSTEP; }
-            else if (KEY_TICKED(J_RIGHT)) { if (app_state.cursor_x < (SCREEN_X_MAX_16U - CURSOR_SPEED_PIXELSTEP)) app_state.cursor_x += CURSOR_SPEED_PIXELSTEP; }
-
-            if      (KEY_TICKED(J_UP))   { if (app_state.cursor_y > CURSOR_SPEED_PIXELSTEP) app_state.cursor_y -= CURSOR_SPEED_PIXELSTEP; }
-            else if (KEY_TICKED(J_DOWN)) { if (app_state.cursor_y < (SCREEN_Y_MAX_16U - CURSOR_SPEED_PIXELSTEP)) app_state.cursor_y += CURSOR_SPEED_PIXELSTEP; }
+        switch (app_state.cursor_speed_mode) {
+            // Pixel step mode only moves on first press
+            case CURSOR_SPEED_MODE_PIXELSTEP: cursor_speed = CURSOR_SPEED_PIXELSTEP; continuous_move = false; break;
+            // All other modes move as long as button pressed
+            case CURSOR_SPEED_MODE_SLOW:      cursor_speed = CURSOR_SPEED_SLOW; break;
+            default:
+            case CURSOR_SPEED_MODE_MEDIUM:    cursor_speed = CURSOR_SPEED_NORMAL; break;
+            case CURSOR_SPEED_MODE_FAST:      cursor_speed = CURSOR_SPEED_FAST; break;
         }
-        else if (cursor_speed_mode == CURSOR_SPEED_MODE_NORMAL) {
 
-            if      (KEYS() & J_LEFT)  { if (app_state.cursor_x > CURSOR_SPEED_NORMAL) app_state.cursor_x -= CURSOR_SPEED_NORMAL; }
-            else if (KEYS() & J_RIGHT) { if (app_state.cursor_x < (SCREEN_X_MAX_16U - CURSOR_SPEED_NORMAL)) app_state.cursor_x += CURSOR_SPEED_NORMAL; }
+        if (continuous_move || KEY_TICKED(J_DPAD)) {
+            if      (KEY_PRESSED(J_LEFT))  { if (app_state.cursor_x > cursor_speed) app_state.cursor_x -= cursor_speed; }
+            else if (KEY_PRESSED(J_RIGHT)) { if (app_state.cursor_x < (SCREEN_X_MAX_16U - cursor_speed)) app_state.cursor_x += cursor_speed; }
 
-            if      (KEYS() & J_UP)   { if (app_state.cursor_y > CURSOR_SPEED_NORMAL) app_state.cursor_y -= CURSOR_SPEED_NORMAL; }
-            else if (KEYS() & J_DOWN) { if (app_state.cursor_y < (SCREEN_Y_MAX_16U - CURSOR_SPEED_NORMAL)) app_state.cursor_y += CURSOR_SPEED_NORMAL; }
-        }
-        else { // implied: if (cursor_speed_mode == CURSOR_SPEED_MODE_FAST) {
-
-            if      (KEYS() & J_LEFT)  { if (app_state.cursor_x > CURSOR_SPEED_FAST) app_state.cursor_x -= CURSOR_SPEED_FAST; }
-            else if (KEYS() & J_RIGHT) { if (app_state.cursor_x < (SCREEN_X_MAX_16U - CURSOR_SPEED_FAST)) app_state.cursor_x += CURSOR_SPEED_FAST; }
-
-            if      (KEYS() & J_UP)   { if (app_state.cursor_y > CURSOR_SPEED_FAST) app_state.cursor_y -= CURSOR_SPEED_FAST; }
-            else if (KEYS() & J_DOWN) { if (app_state.cursor_y < (SCREEN_Y_MAX_16U - CURSOR_SPEED_FAST)) app_state.cursor_y += CURSOR_SPEED_FAST; }
+            if      (KEY_PRESSED(J_UP))    { if (app_state.cursor_y > cursor_speed) app_state.cursor_y -= cursor_speed; }
+            else if (KEY_PRESSED(J_DOWN))  { if (app_state.cursor_y < (SCREEN_Y_MAX_16U - cursor_speed)) app_state.cursor_y += cursor_speed; }
         }
 
         // Clamp cursor to drawing area if a tool is actively drawing

@@ -7,7 +7,7 @@ void ui_update(void) BANKED;
 
 void ui_redraw_after_qrcode(void) BANKED;
 
-void ui_cycle_cursor_speed(void) BANKED;
-void ui_cycle_cursor_teleport(void) BANKED;
+void ui_cursor_cycle_speed(void) BANKED;
+void ui_cursor_cycle_teleport(void) BANKED;
 
 #endif // UI_MAIN_H
