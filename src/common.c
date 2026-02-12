@@ -54,14 +54,16 @@ void app_state_reset(void) BANKED {
 const palette_color_t QR_PAL_CGB[]  = {RGB(31, 31, 31), RGB(0,0,0),    RGB(0,0,0),    RGB(0,0,0)};
 const palette_color_t DEF_PAL_CGB[] = {RGB(31, 31, 31), RGB(21,21,21),   RGB(10,10,10),   RGB(0,0,0)};
 
-const palette_color_t SPR_PAL_MENU_CGB[] = {RGB(31, 31, 31), RGB(31, 31, 31), RGB(21,21,21),   RGB(0,0,0)};  // White, White, LG, Black
-const palette_color_t SPR_PAL_DRAW_CGB[] = {RGB(31, 31, 31), RGB(21,21,21),   RGB(10,10,10),   RGB(0,0,0)};
+const palette_color_t SPR_PAL_MENU_CGB[] = {RGB(31, 31, 31), RGB(31, 31, 31), RGB(0,0,0),    RGB(0,0,0)};  // White, White, Black, Black
+const palette_color_t SPR_PAL_DRAW_CGB[] = {RGB(31, 31, 31), RGB(31, 31, 31), RGB(10,10,10), RGB(0,0,0)};  // White, White, D-Gray, Black (Draw cursor is D-Gray + white)
+// const palette_color_t SPR_PAL_DRAW_CGB[] = {RGB(31, 31, 31), RGB(21,21,21),   RGB(10,10,10), RGB(0,0,0)};  // Alt palette where Draw cursor is D-Gray + L-Gray)
 
 const uint8_t QR_PAL_DMG  = DMG_PALETTE(DMG_WHITE, DMG_BLACK,     DMG_BLACK,     DMG_BLACK);
 const uint8_t DEF_PAL_DMG = DMG_PALETTE(DMG_WHITE, DMG_LITE_GRAY, DMG_DARK_GRAY, DMG_BLACK);
 
-const uint8_t SPR_PAL_MENU_DMG = DMG_PALETTE(DMG_WHITE, DMG_WHITE, DMG_LITE_GRAY, DMG_BLACK);
-const uint8_t SPR_PAL_DRAW_DMG = DMG_PALETTE(DMG_WHITE, DMG_LITE_GRAY, DMG_DARK_GRAY, DMG_BLACK);
+const uint8_t SPR_PAL_MENU_DMG = DMG_PALETTE(DMG_WHITE, DMG_WHITE,     DMG_BLACK,     DMG_BLACK);
+const uint8_t SPR_PAL_DRAW_DMG = DMG_PALETTE(DMG_WHITE, DMG_WHITE,     DMG_DARK_GRAY, DMG_BLACK);
+// const uint8_t SPR_PAL_DRAW_DMG = DMG_PALETTE(DMG_WHITE, DMG_LITE_GRAY, DMG_DARK_GRAY, DMG_BLACK);
 
 void set_pal_qrmode(void) BANKED {
     if (_cpu == CGB_TYPE)  set_bkg_palette(0u, 1u, QR_PAL_CGB);

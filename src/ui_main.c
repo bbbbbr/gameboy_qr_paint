@@ -8,13 +8,15 @@
 #include "common.h"
 #include "input.h"
 
-#include "sprites.h"
 #include "draw.h"
 #include "ui_main.h"
 #include "ui_menu_area.h"
 
 #include <ui_main_bg.h>      // BG APA style image
 #include <ui_main_bg_cde.h>  // BG APA style image  // CDE alternate theme
+
+#include "sprites.h"
+#include <sprites_img.h>     // Cursor and other sprites
 
 #pragma bank 255  // Autobanked
 
@@ -26,12 +28,19 @@ static inline void ui_cursor_teleport_update(bool cursor_in_drawing, uint16_t cu
 static void ui_process_input(bool cursor_in_drawing);
 
 
-void ui_init(void) BANKED {
+void ui_init(void) NONBANKED {
     HIDE_BKG;
     HIDE_SPRITES;
 
     // Load the sprite cursor tiles
-    set_sprite_data(SPRITE_TILE_MOUSE_START, mouse_cursors_count, mouse_cursors);
+    uint8_t save_bank = CURRENT_BANK;
+    SWITCH_ROM(BANK(sprites_img));
+    set_sprite_data(SPRITE_TILE_MOUSE_START, SPRITE_CURSOR_COUNT,      SPRITE_CURSOR_TILE_DATA_START);
+    set_sprite_data(SPRITE_TILE_UNDO_BUTTON, SPRITE_UNDO_BUTTON_COUNT, SPRITE_UNDO_TILE_DATA_START);    
+    SWITCH_ROM(save_bank);
+
+    set_sprite_tile(SPRITE_ID_UNDO_BUTTON, SPRITE_TILE_UNDO_BUTTON);
+    // Undo not enabled by default, will get hidden on initial menu setup
 
     // == Enters drawing mode ==
     mode(M_DRAWING);
@@ -218,7 +227,7 @@ static inline void ui_cursor_teleport_update(bool cursor_in_drawing, uint16_t cu
 
         // Save position in drawing and change state to menu area
         // Use ..last.. since the position to save is where it was BEFORE it changed zones
-        //  if (cursor_last_x < (DEVICE_SCREEN_WIDTH / 2u)) {
+        //  if (cursor_last_x < CURSOR_8U_TO_16U(DEVICE_SCREEN_PX_WIDTH / 2u))
         //     app_state.cursor_menu_left_saved_x = cursor_last_x;
         //     app_state.cursor_menu_left_saved_y = cursor_last_y;
         // } else {

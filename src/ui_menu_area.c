@@ -8,6 +8,7 @@
 #include "common.h"
 #include "input.h"
 
+#include "sprites.h"
 #include "draw.h"
 #include "ui_main.h"
 #include "ui_menu_area.h"
@@ -17,8 +18,6 @@
 
 #include <ui_main_bg.h>      // BG APA style image
 #include <ui_main_bg_cde.h>  // BG APA style image  // CDE alternate theme
-
-#include <undo_button.h>     // Tiles for undo button states
 
 #pragma bank 255  // Autobanked
 
@@ -39,7 +38,8 @@ const uint8_t menu_tools[DRAW_TOOL_COUNT] = {
 };
 
 static void ui_menu_tools(uint8_t cursor_8u_y);
-static void ui_menu_file(uint8_t cursor_8u_y);
+static void ui_menu_file(uint8_t cursor_8u_x);
+static void ui_menu_right(uint8_t cursor_8u_y);
 static void ui_swap_active_color(void);
 static void ui_perform_undo(void);
 
@@ -76,44 +76,26 @@ void ui_redraw_menus_all(void) NONBANKED {
 
 void ui_handle_menu_area(uint8_t cursor_8u_x, uint8_t cursor_8u_y) BANKED {
 
-    // TODO: If needed: make a more abstract button handler (array of rect areas + function pointers)
-
     // TODO: OPTIMIZE: instead of dispatching on every cursor move, only dispatch to menus on button press?
 
-    // TODO: Could partition the screen into left/Right to reduce the number of collision box tests
-
-    // TODO: REMOVABLE: These shouldn't be needed anymore now that cursor is locked in the draw area while drawing is active
-    // // TODO: Sort of a hack, but cancel any pending tool operations if a button is pressed in the menu area
-    // if (KEY_TICKED(UI_ACTION_BUTTON)) {
-    //     draw_tools_cancel_and_reset();
-    // }
-
-    // Tools Menu
-    if ((cursor_8u_x >= TOOLS_MENU_X_START) && (cursor_8u_x < TOOLS_MENU_X_END) &&
-        (cursor_8u_y >= TOOLS_MENU_Y_START) && (cursor_8u_y < TOOLS_MENU_Y_END)) {
-        ui_menu_tools(cursor_8u_y);
-    }
-    // File Menu
-    else if ((cursor_8u_x >= FILE_MENU_X_START) && (cursor_8u_x < FILE_MENU_X_END) &&
-             (cursor_8u_y >= FILE_MENU_Y_START) && (cursor_8u_y < FILE_MENU_Y_END)) {
-        ui_menu_file(cursor_8u_y);
-    }
-    else if ((cursor_8u_x >= CLEAR_BUTTON_X_START) && (cursor_8u_x < CLEAR_BUTTON_X_END) &&
-             (cursor_8u_y >= CLEAR_BUTTON_Y_START) && (cursor_8u_y < CLEAR_BUTTON_Y_END)) {
-        if (KEY_TICKED(UI_ACTION_BUTTON)) {
-            drawing_clear();
+    // Check wide bottom menu first
+    if (cursor_8u_y > UI_BOTTOM_BORDER_START) {
+        if ((cursor_8u_x >= FILE_MENU_X_START) && (cursor_8u_x < FILE_MENU_X_END) &&
+            (cursor_8u_y >= FILE_MENU_Y_START) && (cursor_8u_y < FILE_MENU_Y_END)) {
+            ui_menu_file(cursor_8u_x);
         }
-    }
-    else if ((cursor_8u_x >= COLOR_CHANGE_BUTTON_X_START) && (cursor_8u_x < COLOR_CHANGE_BUTTON_X_END) &&
-             (cursor_8u_y >= COLOR_CHANGE_BUTTON_Y_START) && (cursor_8u_y < COLOR_CHANGE_BUTTON_Y_END)) {
-        if (KEY_TICKED(UI_ACTION_BUTTON)) {
-            ui_swap_active_color();
+    } // Partition the screen left/right
+    else if (cursor_8u_x < (DEVICE_SCREEN_PX_WIDTH / 2u)) {
+        // Tools Menu
+        if ((cursor_8u_x >= TOOLS_MENU_X_START) && (cursor_8u_x < TOOLS_MENU_X_END) &&
+            (cursor_8u_y >= TOOLS_MENU_Y_START) && (cursor_8u_y < TOOLS_MENU_Y_END)) {
+            ui_menu_tools(cursor_8u_y);
         }
-    }
-    else if ((cursor_8u_x >= UNDO_BUTTON_X_START) && (cursor_8u_x < UNDO_BUTTON_X_END) &&
-             (cursor_8u_y >= UNDO_BUTTON_Y_START) && (cursor_8u_y < UNDO_BUTTON_Y_END)) {
-        if (KEY_TICKED(UI_ACTION_BUTTON)) {
-            ui_perform_undo();
+    } else {
+        // File Menu
+        if ((cursor_8u_x >= RIGHT_MENU_X_START) && (cursor_8u_x < RIGHT_MENU_X_END) &&
+             (cursor_8u_y >= RIGHT_MENU_Y_START) && (cursor_8u_y < RIGHT_MENU_Y_END)) {
+            ui_menu_right(cursor_8u_y);
         }
     }
 }
@@ -130,7 +112,7 @@ static void ui_menu_tools(uint8_t cursor_8u_y) {
     // A button used to press buttons
     if (KEY_TICKED(UI_ACTION_BUTTON)) {
         // Clear any pending tool actions
-        draw_tools_cancel_and_reset(); // TODO: this seems redundant since it's called in the function that calls this
+        draw_tools_cancel_and_reset();
 
         // Tool icons are uniform in size, so divide position by size to get it
         uint8_t new_tool = (cursor_8u_y - TOOLS_MENU_Y_START) / TOOLS_MENU_ITEM_HEIGHT;
@@ -160,18 +142,22 @@ void ui_menu_tools_draw_highlight(uint8_t tool_num, uint8_t draw_color) BANKED {
 // ===== File Menu =====
 
 
-static void ui_menu_file(uint8_t cursor_8u_y) {
+static void ui_menu_file(uint8_t cursor_8u_x) {
 
     // TODO: optional: highlight button under cursor as it moves
     // TODO: optional: animate button press somehow
 
     // A button used to press buttons
     if (KEY_TICKED(UI_ACTION_BUTTON)) {
+        // Clear any pending tool actions
+        draw_tools_cancel_and_reset();
+
         // Tool icons are uniform in size, so divide position by size to get it
-        uint8_t file_menu_item = (cursor_8u_y - FILE_MENU_Y_START) / FILE_MENU_ITEM_HEIGHT;
+        uint8_t file_menu_item = (cursor_8u_x - FILE_MENU_X_START) / FILE_MENU_ITEM_WIDTH;
 
         switch (file_menu_item) {
             case FILE_MENU_LOAD:
+            case FILE_MENU_LOAD2:  // Right half of 2 unit wide button
                 // Take undo snapshot first, in case user changes their mind
                 drawing_take_undo_snapshot();
                 drawing_restore_from_sram(SRAM_BANK_DRAWING_SAVES, app_state.save_slot_current);
@@ -190,11 +176,11 @@ static void ui_menu_file(uint8_t cursor_8u_y) {
                     break;
 
             case FILE_MENU_SAVE:
+            case FILE_MENU_SAVE2:  // Right half of 2 unit wide button
                     drawing_save_to_sram(SRAM_BANK_DRAWING_SAVES, app_state.save_slot_current);
                     break;
         }
     }
-
 }
 
 
@@ -206,11 +192,38 @@ void ui_menu_file_draw_highlight(uint8_t num, uint8_t draw_color) BANKED {
     // Menu highlights start after Load button which is first/top
     num += FILE_MENU_START_OF_SAVE_SLOTS_OFFSET;
     
-    uint8_t x1 =  FILE_MENU_X_START;
-    uint8_t y1 = (num * FILE_MENU_ITEM_HEIGHT) + (FILE_MENU_Y_START);
+    uint8_t x1 = (num * FILE_MENU_ITEM_WIDTH) + (FILE_MENU_X_START);
+    uint8_t y1 = FILE_MENU_Y_START;
 
     color(draw_color, WHITE, SOLID);
     box(x1, y1, x1 + (FILE_MENU_ITEM_WIDTH -1u), y1 + (FILE_MENU_ITEM_HEIGHT - 1u), M_NOFILL);
+}
+
+
+// ===== Right Menu ====
+
+static void ui_menu_right(uint8_t cursor_8u_y) {
+
+    // TODO: optional: highlight button under cursor as it moves
+    // TODO: optional: animate button press somehow
+
+    // A button used to press buttons
+    if (KEY_TICKED(UI_ACTION_BUTTON)) {
+        // Tool icons are uniform in size, so divide position by size to get it
+        uint8_t file_menu_item = (cursor_8u_y - RIGHT_MENU_Y_START) / RIGHT_MENU_ITEM_HEIGHT;
+
+        switch (file_menu_item) {
+            case RIGHT_MENU_REDO: break; // TODO
+            case RIGHT_MENU_UNDO: ui_perform_undo();
+                                  break;
+            case RIGHT_MENU_COLOR_SWAP: ui_swap_active_color();
+                                        break;
+            case RIGHT_MENU_WIDTH: break; // TODO
+            case RIGHT_MENU_SPEED: break; // TODO
+            case RIGHT_MENU_CLEAR: drawing_clear();
+                                   break;
+        }
+    }
 }
 
 
@@ -233,21 +246,16 @@ static void ui_swap_active_color(void) {
     box(COLOR_MAIN_X_START, COLOR_MAIN_Y_START, COLOR_MAIN_X_END, COLOR_MAIN_Y_END, M_FILL);
 }
 
-// TODO: could make common nonbanked set tile utility function
+
 void ui_undo_button_enable(void) NONBANKED {
-    uint8_t save_bank = CURRENT_BANK;
-    SWITCH_ROM(BANK(undo_button));
-        vmemcpy(UNDO_BUTTON_VRAM_ADDR, undo_button_tiles + UNDO_BUTTON_TILE_ENABLED, TILE_SZ_BYTES);
-    SWITCH_ROM(save_bank);
+    move_sprite(SPRITE_ID_UNDO_BUTTON, UNDO_BUTTON_SPR_X, UNDO_BUTTON_SPR_Y);
 
     EMU_printf("enable undo\n");
 }
 
+
 void ui_undo_button_disable(void) NONBANKED {
-    uint8_t save_bank = CURRENT_BANK;
-    SWITCH_ROM(BANK(undo_button));
-        vmemcpy(UNDO_BUTTON_VRAM_ADDR, undo_button_tiles + UNDO_BUTTON_TILE_DISABLED, TILE_SZ_BYTES);
-    SWITCH_ROM(save_bank);
+    hide_sprite(SPRITE_ID_UNDO_BUTTON);
 
     EMU_printf("disable undo\n");
 }
@@ -255,4 +263,3 @@ void ui_undo_button_disable(void) NONBANKED {
 static void ui_perform_undo(void) {
     drawing_restore_undo_snapshot();
 }
-

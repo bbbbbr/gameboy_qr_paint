@@ -1,8 +1,39 @@
 #ifndef SPRITES_H
 #define SPRITES_H
 
-// TODO: make proper resource images out of these cursors
-extern const unsigned char mouse_cursors[];
-extern uint8_t mouse_cursors_count;
+#include "common.h"
+
+enum {
+    SPR_TYPE_START = 0u,
+
+    // Cursors
+    SPR_TYPE_CURSOR_POINTER = SPR_TYPE_START,
+    SPR_TYPE_CURSOR_ERASER,
+    SPR_TYPE_CURSOR_HAND,
+
+    // Buttons/indicators
+    SPR_TYPE_UNDO_BUTTON,
+
+    SPRITE_CURSOR_COUNT = ((SPR_TYPE_CURSOR_HAND - SPR_TYPE_CURSOR_POINTER) + 1u),
+    SPRITE_UNDO_BUTTON_COUNT = 1u
+};
+
+enum {
+    SPRITE_TILE_MOUSE_START = 0u,
+    SPRITE_TILE_UNDO_BUTTON = (SPRITE_TILE_MOUSE_START + SPRITE_CURSOR_COUNT)
+};
+
+#define SPR_TYPE_CURSOR_POINTER  (SPR_TYPE_CURSOR_POINTER)
+#define SPR_TYPE_CURSOR_ERASER   (SPR_TYPE_CURSOR_ERASER)
+#define SPR_TYPE_UNDO_BUTTON     (SPR_TYPE_UNDO_BUTTON)
+
+enum {
+    SPRITE_ID_MOUSE_CURSOR  = 0u,
+    SPRITE_ID_UNDO_BUTTON
+};
+
+#define SPRITE_CURSOR_TILE_DATA_START  (sprites_img_tiles + (SPRITE_TILE_MOUSE_START * TILE_SZ_BYTES))
+#define SPRITE_UNDO_TILE_DATA_START    (sprites_img_tiles + (SPR_TYPE_UNDO_BUTTON * TILE_SZ_BYTES))
+
 
 #endif // SPRITES_H

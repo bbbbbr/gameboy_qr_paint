@@ -36,6 +36,7 @@ void make_and_show_qrcode(void) {
 
 void main(void)
 {
+    HIDE_SPRITES;
     ENABLE_RAM;
     SWITCH_RAM(SRAM_BANK_CALC_BUFFER); // RAM bank 0
 
@@ -50,6 +51,8 @@ void main(void)
     app_state_reset();
     ui_init();
     draw_init();
+
+    SHOW_SPRITES;
 
     // Loop forever
     while(1) {
