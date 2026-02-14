@@ -27,8 +27,9 @@ static uint8_t get_radius(uint8_t cursor_8u_x, uint8_t cursor_8u_y);
 // Width variations for tools
 static void draw_tool_pencil_width_2(uint8_t cursor_8u_x, uint8_t cursor_8u_y);
 static void draw_tool_pencil_width_3(uint8_t cursor_8u_x, uint8_t cursor_8u_y);
-
 static void draw_tool_line_width_2_and_3(uint8_t cursor_8u_x, uint8_t cursor_8u_y);
+static void draw_tool_rect_width_2_and_3(uint8_t cursor_8u_x, uint8_t cursor_8u_y);
+static void draw_tool_rect_circle_2_and_3(uint8_t cursor_8u_x, uint8_t cursor_8u_y);
 
 static void draw_tool_pencil(uint8_t cursor_8u_x, uint8_t cursor_8u_y);
 static void draw_tool_line(uint8_t cursor_8u_x, uint8_t cursor_8u_y);
@@ -390,6 +391,71 @@ static void draw_tool_line(uint8_t cursor_8u_x, uint8_t cursor_8u_y) {
 }
 
 
+static void draw_tool_rect_width_2_and_3(uint8_t cursor_8u_x, uint8_t cursor_8u_y) {
+
+    uint8_t start_x = tool_start_x;
+    uint8_t start_y = tool_start_y;
+    uint8_t end_x   = cursor_8u_x;
+    uint8_t end_y   = cursor_8u_y;
+
+    if (app_state.draw_width == DRAW_WIDTH_MODE_3) {
+        // Draw area clipping to accommodate drawing a rect outside all the way around the primary location
+        if (start_x < (IMG_X_START + 1u)) start_x = IMG_X_START + 1u;
+        if (start_y < (IMG_Y_START + 1u)) start_y = IMG_Y_START + 1u;
+        if (end_x   < (IMG_X_START + 1u)) end_x   = IMG_X_START + 1u;
+        if (end_y   < (IMG_Y_START + 1u)) end_y   = IMG_Y_START + 1u;
+
+        if (start_x > (IMG_X_END - 1u)) start_x = IMG_X_END - 1u;
+        if (start_y > (IMG_Y_END - 1u)) start_y = IMG_Y_END - 1u;
+        if (end_x   > (IMG_X_END - 1u)) end_x   = IMG_X_END - 1u;
+        if (end_y   > (IMG_Y_END - 1u)) end_y   = IMG_Y_END - 1u;
+    }
+
+    // First rect
+    box(start_x, start_y, end_x, end_y, tool_fillstyle);
+
+    // Second one is shifted by 1 pixel all the way around to be inside the primary one
+    if (start_x == end_x) {
+        // no X change since this is basically a vertical line
+    } else {
+        if (start_x < end_x) { start_x++; end_x--; }
+        else                 { start_x--; end_x++; }
+    }
+
+    if (start_y == end_y) {
+        // no y change since this is basically a horizontal line
+    } else {
+        if (start_y < end_y) { start_y++; end_y--; }
+        else                 { start_y--; end_y++; }
+    }
+
+    box(start_x, start_y, end_x, end_y, tool_fillstyle);
+
+    // Third rect if applicable
+    if (app_state.draw_width == DRAW_WIDTH_MODE_3) {
+
+        // The += 2 below instead of ++ is to compensate for the earlier -1
+        // to shrink inside the main rect
+
+        if (start_x == end_x) {
+            // no X change since this is basically a vertical line
+        } else {
+            if (start_x < end_x) { start_x -= 2u; end_x += 2u; }
+            else                 { start_x += 2u; end_x -= 2u; }
+        }
+
+        if (start_y == end_y) {
+            // no y change since this is basically a horizontal line
+        } else {
+            if (start_y < end_y) { start_y -= 2u; end_y += 2u; }
+            else                 { start_y += 2u; end_y -= 2u; }
+        }
+
+        box(start_x, start_y, end_x, end_y, tool_fillstyle);
+    }
+}
+
+
 // Used for when a tool is canceled and there is an active preview pending
 static void draw_tool_rect_finalize_last_preview(void) {
     // Undraw last preview
@@ -401,7 +467,10 @@ static void draw_tool_rect_finalize_last_preview(void) {
 
     // Draw finalized version
     drawing_set_to_main_colors();
-    box(tool_start_x, tool_start_y, app_state.draw_cursor_8u_last_x, app_state.draw_cursor_8u_last_y, tool_fillstyle);
+    if (app_state.draw_width == DRAW_WIDTH_MODE_1)
+        box(tool_start_x, tool_start_y, app_state.draw_cursor_8u_last_x, app_state.draw_cursor_8u_last_y, tool_fillstyle);
+    else
+        draw_tool_rect_width_2_and_3(app_state.draw_cursor_8u_last_x, app_state.draw_cursor_8u_last_y);
 }
 
 
@@ -445,7 +514,10 @@ static void draw_tool_rect(uint8_t cursor_8u_x, uint8_t cursor_8u_y) {
             drawing_take_undo_snapshot();
 
             drawing_set_to_main_colors();
-            box(tool_start_x, tool_start_y, cursor_8u_x, cursor_8u_y, tool_fillstyle);
+            if (app_state.draw_width == DRAW_WIDTH_MODE_1)
+                box(tool_start_x, tool_start_y, cursor_8u_x, cursor_8u_y, tool_fillstyle);
+            else
+                draw_tool_rect_width_2_and_3(cursor_8u_x, cursor_8u_y);
 
             app_state.draw_tool_using_b_button_action = false;
             app_state.tool_currently_drawing = false;
@@ -493,6 +565,50 @@ static uint8_t get_radius(uint8_t cursor_8u_x, uint8_t cursor_8u_y) {
 }
 
 
+static void draw_tool_rect_circle_2_and_3(uint8_t cursor_8u_x, uint8_t cursor_8u_y) {
+
+    uint8_t start_x = tool_start_x;
+    uint8_t start_y = tool_start_y;
+    uint8_t end_x   = cursor_8u_x;
+    uint8_t end_y   = cursor_8u_y;
+
+    uint8_t radius = get_radius(end_x, end_y);
+
+    if ((start_x - radius) < (IMG_X_START + 1u)) radius--;
+    if ((start_y - radius) < (IMG_Y_START + 1u)) radius--;
+
+    if (app_state.draw_width == DRAW_WIDTH_MODE_3) {
+        // Draw area clipping to accommodate drawing a circle outside all the way around the primary location
+        if ((start_x + radius) > (IMG_X_END   - 1u)) radius--;
+        if ((start_y + radius) > (IMG_Y_END   - 1u)) radius--;
+    }
+
+    // First circle
+    circle(tool_start_x, tool_start_y, radius, tool_fillstyle);
+
+    if (app_state.draw_width == DRAW_WIDTH_MODE_2) {
+    // Second
+    // (Triple draw shifted left and up instead of "radius--" since integer stepping means
+    // there would be gaps between the two circle lines in some areas
+    circle(tool_start_x - 1u, tool_start_y,      radius, tool_fillstyle);
+    circle(tool_start_x     , tool_start_y - 1u, radius, tool_fillstyle);
+    circle(tool_start_x - 1u, tool_start_y - 1u, radius, tool_fillstyle);
+
+
+    // Third circle if applicable (shifted right and down)
+    } else { // if (app_state.draw_width == DRAW_WIDTH_MODE_3) {
+
+        //
+        circle(tool_start_x, tool_start_y, radius + 1u, tool_fillstyle);
+        circle(tool_start_x, tool_start_y, radius - 1u, tool_fillstyle);
+        circle(tool_start_x - 1u, tool_start_y,      radius, tool_fillstyle);
+        circle(tool_start_x     , tool_start_y - 1u, radius, tool_fillstyle);
+        circle(tool_start_x + 1u, tool_start_y,      radius, tool_fillstyle);
+        circle(tool_start_x     , tool_start_y + 1u, radius, tool_fillstyle);
+    }
+}
+
+
 static void draw_tool_circle_finalize_last_preview(void) {
     // Undraw last preview
     color(BLACK,WHITE,XOR);
@@ -503,7 +619,10 @@ static void draw_tool_circle_finalize_last_preview(void) {
 
     // Draw finalized version
     drawing_set_to_main_colors();
-    circle(tool_start_x, tool_start_y, get_radius(app_state.draw_cursor_8u_last_x, app_state.draw_cursor_8u_last_y), tool_fillstyle);
+    if (app_state.draw_width == DRAW_WIDTH_MODE_1)
+        circle(tool_start_x, tool_start_y, get_radius(app_state.draw_cursor_8u_last_x, app_state.draw_cursor_8u_last_y), tool_fillstyle);
+    else
+        draw_tool_rect_circle_2_and_3(app_state.draw_cursor_8u_last_x, app_state.draw_cursor_8u_last_y);
 }
 
 
@@ -554,7 +673,10 @@ static void draw_tool_circle(uint8_t cursor_8u_x, uint8_t cursor_8u_y) {
             drawing_take_undo_snapshot();
 
             drawing_set_to_main_colors();
-            circle(tool_start_x, tool_start_y, get_radius(cursor_8u_x, cursor_8u_y), tool_fillstyle);
+            if (app_state.draw_width == DRAW_WIDTH_MODE_1)
+                circle(tool_start_x, tool_start_y, get_radius(cursor_8u_x, cursor_8u_y), tool_fillstyle);
+            else
+                draw_tool_rect_circle_2_and_3(cursor_8u_x, cursor_8u_y);
 
             app_state.draw_tool_using_b_button_action = false;
             app_state.tool_currently_drawing = false;
