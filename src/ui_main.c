@@ -40,12 +40,15 @@ void ui_init(void) NONBANKED {
     SWITCH_ROM(BANK(sprites_img));
     set_sprite_data(SPRITE_TILE_MOUSE_START, SPRITE_CURSOR_COUNT,      SPRITE_CURSOR_TILE_DATA_START);
     set_sprite_data(SPRITE_TILE_UNDO_BUTTON, SPRITE_UNDO_BUTTON_COUNT, SPRITE_UNDO_TILE_DATA_START);    
+    // Redo sprite uses undo sprite
     set_sprite_data(SPRITE_TILE_DRAW_WIDTH_IND, SPRITE_DRAW_WIDTH_IND_COUNT, SPRITE_DRAW_WIDTH_IND_TILE_DATA_START);
     SWITCH_ROM(save_bank);
 
     set_sprite_tile(SPRITE_ID_UNDO_BUTTON, SPRITE_TILE_UNDO_BUTTON);
+    set_sprite_tile(SPRITE_ID_REDO_BUTTON, SPRITE_TILE_REDO_BUTTON);
+    set_sprite_prop(SPRITE_ID_REDO_BUTTON, S_FLIPX); // Redo sprite is the undo flipped horizontally
     set_sprite_tile(SPRITE_ID_DRAW_WIDTH_IND, SPRITE_TILE_DRAW_WIDTH_IND);
-    // Undo not enabled by default, will get hidden on initial menu setup
+    // Undo and Redo not enabled by default, will get hidden on initial menu setup
 
     // == Enters drawing mode ==
     mode(M_DRAWING);

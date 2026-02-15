@@ -34,7 +34,9 @@ static void ui_menu_tools(uint8_t cursor_8u_y);
 static void ui_menu_file(uint8_t cursor_8u_x);
 static void ui_menu_right(uint8_t cursor_8u_y);
 static void ui_swap_active_color(void);
+
 static void ui_perform_undo(void);
+static void ui_perform_redo(void);
 
 // Draws the paint working area
 void ui_redraw_menus_all(void) NONBANKED {
@@ -58,10 +60,8 @@ void ui_redraw_menus_all(void) NONBANKED {
     ui_menu_tools_draw_highlight(app_state.drawing_tool, TOOLS_MENU_HIGHLIGHT_COLOR);
     ui_menu_file_draw_highlight(app_state.save_slot_current, FILE_MENU_HIGHLIGHT_COLOR);
 
-    if (app_state.undo_count > DRAW_UNDO_COUNT_NONE)
-        ui_undo_button_enable();
-    else
-        ui_undo_button_disable();
+    ui_undo_button_refresh();
+    ui_redo_button_refresh();
 
     ui_cursor_speed_redraw_indicator();
     ui_draw_width_redraw_indicator();
@@ -210,7 +210,8 @@ static void ui_menu_right(uint8_t cursor_8u_y) {
         uint8_t file_menu_item = (cursor_8u_y - RIGHT_MENU_Y_START) / RIGHT_MENU_ITEM_HEIGHT;
 
         switch (file_menu_item) {
-            case RIGHT_MENU_REDO: break; // TODO
+            case RIGHT_MENU_REDO:       ui_perform_redo();
+                                        break;
 
             case RIGHT_MENU_UNDO:       ui_perform_undo();
                                         break;
@@ -251,17 +252,25 @@ static void ui_swap_active_color(void) {
 }
 
 
-void ui_undo_button_enable(void) BANKED {
-    move_sprite(SPRITE_ID_UNDO_BUTTON, UNDO_BUTTON_SPR_X, UNDO_BUTTON_SPR_Y);
-
-    EMU_printf("enable undo\n");
+void ui_undo_button_refresh(void) BANKED {
+    if (app_state.undo_count > DRAW_UNDO_COUNT_NONE) {
+        // Enabled        
+        move_sprite(SPRITE_ID_UNDO_BUTTON, UNDO_BUTTON_SPR_X, UNDO_BUTTON_SPR_Y);
+    } else {
+        // Disabled
+        hide_sprite(SPRITE_ID_UNDO_BUTTON);
+    }
 }
 
 
-void ui_undo_button_disable(void) BANKED {
-    hide_sprite(SPRITE_ID_UNDO_BUTTON);
-
-    EMU_printf("disable undo\n");
+void ui_redo_button_refresh(void) BANKED {
+    if (app_state.redo_count > DRAW_REDO_COUNT_NONE) {
+        // Enabled        
+        move_sprite(SPRITE_ID_REDO_BUTTON, REDO_BUTTON_SPR_X, REDO_BUTTON_SPR_Y);
+    } else {
+        // Disabled
+        hide_sprite(SPRITE_ID_REDO_BUTTON);
+    }
 }
 
 
@@ -284,7 +293,12 @@ void ui_cursor_speed_redraw_indicator(void) NONBANKED {
 
 
 static void ui_perform_undo(void) {
-    drawing_restore_undo_snapshot();
+    drawing_restore_undo_snapshot(UNDO_RESTORE_REDO_SNAPSHOT_YES);
+}
+
+
+static void ui_perform_redo(void) {
+    drawing_restore_redo_snapshot();
 }
 
 

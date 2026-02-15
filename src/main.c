@@ -13,7 +13,7 @@ void make_and_show_qrcode(void);
 
 void make_and_show_qrcode(void) {
 
-    drawing_take_undo_snapshot();
+    drawing_take_undo_snapshot();  // This means generating a QRCode clears out any Redo queue entries that might be present
     image_to_png_qrcode_url();
     set_pal_qrmode();
 
@@ -28,7 +28,7 @@ void make_and_show_qrcode(void) {
 
     set_pal_normal();
     ui_redraw_after_qrcode();
-    drawing_restore_undo_snapshot();
+    drawing_restore_undo_snapshot(UNDO_RESTORE_WITHOUT_REDO_SNAPSHOT);  // Don't create a Redo snapshot since it would be of the QRCode overlay on the drawing image
 
     SHOW_SPRITES;
 }

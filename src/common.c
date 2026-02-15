@@ -14,7 +14,8 @@ void app_state_reset(void) BANKED {
     app_state.save_slot_current = DRAW_SAVE_SLOT_DEFAULT;
 
     app_state.undo_count        = DRAW_UNDO_COUNT_NONE;
-    app_state.undo_slot_current = DRAW_UNDO_SLOT_DEFAULT;
+    app_state.redo_count        = DRAW_REDO_COUNT_NONE;
+    app_state.next_undo_slot    = DRAW_UNDO_SLOT_DEFAULT;
 
     // UI related
     app_state.cursor_x = CURSOR_8U_TO_16U(DEVICE_SCREEN_PX_WIDTH / 2);

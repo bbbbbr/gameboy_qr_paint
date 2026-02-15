@@ -42,8 +42,14 @@
 #define DRAW_UNDO_SLOT_MIN     (DRAW_SAVE_SLOT_MIN)
 #define DRAW_UNDO_SLOT_MAX     ((DRAW_UNDO_SRAM_NUM_BANKS * DRAW_UNDO_SLOTS_PER_SRAM_BANK) - 1u) // NOTE: Spread across 2 SRAM banks!
 #define DRAW_UNDO_SLOT_COUNT   ((DRAW_UNDO_SLOT_MAX - DRAW_UNDO_SLOT_MIN) + 1u)
+#define DRAW_UNDO_SLOT_COUNT_USABLE   (DRAW_UNDO_SLOT_COUNT - 1u) // Usable undo count is reduced by 1 since redo adds 1 snapshot of "current" drawing image before undos
 #define DRAW_UNDO_SLOT_DEFAULT (DRAW_UNDO_SLOT_MIN)
 #define DRAW_UNDO_COUNT_NONE   (0u)
+#define DRAW_REDO_COUNT_NONE   (0u)
+
+#define UNDO_RESTORE_REDO_SNAPSHOT_YES     true
+#define UNDO_RESTORE_WITHOUT_REDO_SNAPSHOT false
+
 
 #define DRAW_COLOR_MAIN_DEFAULT (BLACK)
 #define DRAW_COLOR_BG_DEFAULT   (WHITE)
@@ -207,7 +213,8 @@ typedef struct app_state_t {
     uint8_t save_slot_current;
 
     uint8_t undo_count;
-    uint8_t undo_slot_current;
+    uint8_t redo_count;
+    uint8_t next_undo_slot;
 
 
     // == Cursor ==

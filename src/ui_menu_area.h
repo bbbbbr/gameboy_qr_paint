@@ -61,9 +61,12 @@
     #define COLOR_ALT_X_END   (COLOR_ALT_X_START   + COLOR_ALT_WIDTH)
     #define COLOR_ALT_Y_END   (COLOR_ALT_Y_START   + COLOR_ALT_HEIGHT)
 
-    // Undo button is actually a sprite to make it cheaper to turn on/off
+    // Undo and Redo buttons are actually sprites to make it cheaper to turn on/off
     #define UNDO_BUTTON_SPR_X   ((RIGHT_MENU_X_START + 7u) + (uint8_t)DEVICE_SPRITE_PX_OFFSET_X)
     #define UNDO_BUTTON_SPR_Y   ((RIGHT_MENU_Y_START + (RIGHT_MENU_UNDO * RIGHT_MENU_ITEM_HEIGHT) + 4u) + DEVICE_SPRITE_PX_OFFSET_Y)
+
+    #define REDO_BUTTON_SPR_X   ((RIGHT_MENU_X_START + 5u) + (uint8_t)DEVICE_SPRITE_PX_OFFSET_X)
+    #define REDO_BUTTON_SPR_Y   ((RIGHT_MENU_Y_START + (RIGHT_MENU_REDO * RIGHT_MENU_ITEM_HEIGHT) + 4u) + DEVICE_SPRITE_PX_OFFSET_Y)
 
     // Speed Button (update handled in ui_main)
     #define CURSOR_SPEED_IND_ROW1_TILE_ID       253u // Index of tile in apa image mode
@@ -109,8 +112,8 @@ void ui_handle_menu_area(uint8_t cursor_8u_x, uint8_t cursor_8u_y) BANKED;
 void ui_menu_tools_draw_highlight(uint8_t tool_num, uint8_t draw_color) BANKED;
 void ui_menu_file_draw_highlight(uint8_t num, uint8_t draw_color) BANKED;
 
-void ui_undo_button_enable(void) BANKED;
-void ui_undo_button_disable(void) BANKED;
+void ui_undo_button_refresh(void) BANKED;
+void ui_redo_button_refresh(void) BANKED;
 
 void ui_cursor_speed_redraw_indicator(void) NONBANKED;
 void ui_draw_width_redraw_indicator(void) BANKED;
