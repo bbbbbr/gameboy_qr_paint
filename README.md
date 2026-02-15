@@ -9,12 +9,23 @@ Draw on the Game Boy and share it direct to your phone using a QRCode!
 (without the internet!)
 
 
+## Features
+- Share drawings as PNG images via QR Code
+- Drawing tools: Pencil, Line, Eraser, Rectangle, Circle, Flood Fill
+- Undo, Redo stack
+- 3 Drawing Save slots
+- Adjustable Draw Width
+- Adjustable Draw speed (Fast, Medium, Slow, Pixel Step)
+- 2 Draw colors (Black and White)
+
+
 ## Usage
-Drawing Controls:
+Button Controls:
 - `D-Pad`: Move cursor
 - `A`: Draws with tool
 - `B`: Cancel tool action / Teleport cursor between menu and drawing areas
 - `SELECT + UP/DOWN`: Adjust Cursor Speed
+- `SELECT + LEFT/RIGHT`: Adjust Drawing Width
 - `START`: Create QRCode
 
 
