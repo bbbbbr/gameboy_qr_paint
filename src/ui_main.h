@@ -9,6 +9,8 @@ void ui_redraw_after_qrcode(void) BANKED;
 
 void ui_draw_width_cycle(void) BANKED;
 
+void ui_cursor_speed_update_settings(void) BANKED;
+
 void ui_cursor_cycle_speed(void) BANKED;
 void ui_cursor_cycle_teleport(void) BANKED;
 

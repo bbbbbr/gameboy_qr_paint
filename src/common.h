@@ -120,10 +120,15 @@
 
 #define CURSOR_SPEED_PIXELSTEP  (CURSOR_8U_TO_16U(1u))
 #define CURSOR_SPEED_FAST       (CURSOR_8U_TO_16U(1u))
-#define CURSOR_SPEED_NORMAL     (CURSOR_8U_TO_16U(1u) / 3u)
+#define CURSOR_SPEED_NORMAL     (CURSOR_8U_TO_16U(1u) / 2u)
 #define CURSOR_SPEED_SLOW       (CURSOR_8U_TO_16U(1u) / 5u)
 #define CURSOR_SPEED_UI         (CURSOR_8U_TO_16U(1u) + (CURSOR_8U_TO_16U(1u) / 2u))
 
+// Acceleration and deceleration factor of CURSOR_SPEED_...
+#define CURSOR_ACCEL_FACTOR_FULL       1u  //  1/1
+#define CURSOR_ACCEL_FACTOR_FAST       4u  //  1/4th
+#define CURSOR_ACCEL_FACTOR_NORMAL     6u  //  1/6th
+#define CURSOR_ACCEL_FACTOR_SLOW       6u  //  1/6h
 
 enum {
     CURSOR_SPEED_MODE_MIN,
@@ -227,6 +232,8 @@ typedef struct app_state_t {
     // == Cursor ==
     uint16_t cursor_x;
     uint16_t cursor_y;
+    int16_t cursor_accel_x;
+    int16_t cursor_accel_y;
 
     uint8_t cursor_8u_cache_x;
     uint8_t cursor_8u_cache_y;

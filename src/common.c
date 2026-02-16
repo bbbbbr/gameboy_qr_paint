@@ -22,6 +22,9 @@ void app_state_reset(void) BANKED {
     app_state.cursor_x = CURSOR_8U_TO_16U(DEVICE_SCREEN_PX_WIDTH / 2);
     app_state.cursor_y = CURSOR_8U_TO_16U(DEVICE_SCREEN_PX_HEIGHT / 2);
 
+    app_state.cursor_accel_x = 0;
+    app_state.cursor_accel_y = 0;
+
     app_state.cursor_8u_cache_x = CURSOR_TO_8U_X();
     app_state.cursor_8u_cache_y = CURSOR_TO_8U_Y();
 

@@ -21,6 +21,11 @@
 
 #pragma bank 255  // Autobanked
 
+static int16_t  cursor_accel_limit;
+static uint8_t  cursor_accel_factor;
+static int16_t  cursor_accel_increment;
+static bool     cursor_continuous_move;
+
 static void ui_draw_width_handle_input(void);
 static void ui_cursor_speed_handle_input(void);
 static void ui_cursor_teleport_save_zone(uint8_t teleport_zone_to_save);
@@ -51,6 +56,8 @@ void ui_init(void) NONBANKED {
     set_sprite_tile(SPRITE_ID_DRAW_WIDTH_IND, SPRITE_TILE_DRAW_WIDTH_IND);
     set_sprite_tile(SPRITE_ID_CONFIRM_CHECK, SPRITE_TILE_CONFIRM_CHECK);
     // Undo and Redo not enabled by default, will get hidden on initial menu setup
+
+    ui_cursor_speed_update_settings();
 
     // == Enters drawing mode ==
     mode(M_DRAWING);
@@ -131,6 +138,34 @@ static void ui_draw_width_handle_input(void) {
 }
 
 
+void ui_cursor_speed_update_settings(void) BANKED {
+
+    cursor_continuous_move = true;
+    // Set acceleration factor and max speed
+    switch (app_state.cursor_speed_mode) {
+        // Pixel step mode only moves on first press
+        case CURSOR_SPEED_MODE_PIXELSTEP: cursor_accel_limit = CURSOR_SPEED_PIXELSTEP;
+                                          cursor_accel_factor = CURSOR_ACCEL_FACTOR_FULL;
+                                          cursor_continuous_move = false;
+                                          break;
+
+        // All other modes move as long as button pressed
+        case CURSOR_SPEED_MODE_SLOW:      cursor_accel_limit = CURSOR_SPEED_SLOW;
+                                          cursor_accel_factor = CURSOR_ACCEL_FACTOR_SLOW;
+                                          break;
+        default:
+        case CURSOR_SPEED_MODE_MEDIUM:    cursor_accel_limit = CURSOR_SPEED_NORMAL;
+                                          cursor_accel_factor = CURSOR_ACCEL_FACTOR_NORMAL;
+                                          break;
+
+        case CURSOR_SPEED_MODE_FAST:      cursor_accel_limit = CURSOR_SPEED_FAST;
+                                          cursor_accel_factor = CURSOR_ACCEL_FACTOR_FAST;
+                                          break;
+    }
+
+    cursor_accel_increment = cursor_accel_limit / cursor_accel_factor;
+}
+
 // Used for clicking speed menu button
 void ui_cursor_cycle_speed(void) BANKED {
     if (app_state.cursor_speed_mode == CURSOR_SPEED_MODE_MAX)
@@ -138,6 +173,7 @@ void ui_cursor_cycle_speed(void) BANKED {
     else
         app_state.cursor_speed_mode++;
 
+    ui_cursor_speed_update_settings();
     ui_cursor_speed_redraw_indicator();
 }
 
@@ -145,14 +181,18 @@ void ui_cursor_cycle_speed(void) BANKED {
 static void ui_cursor_speed_handle_input(void) {
 
     if (KEY_TICKED(SPEED_UP_BUTTON)) {        
-        if (app_state.cursor_speed_mode < CURSOR_SPEED_MODE_MAX)
+        if (app_state.cursor_speed_mode < CURSOR_SPEED_MODE_MAX) {
             app_state.cursor_speed_mode++;
             ui_cursor_speed_redraw_indicator();
+            ui_cursor_speed_update_settings();
+        }
     }
     else if (KEY_TICKED(SPEED_DOWN_BUTTON)) {        
-        if (app_state.cursor_speed_mode > CURSOR_SPEED_MODE_MIN)
+        if (app_state.cursor_speed_mode > CURSOR_SPEED_MODE_MIN) {
             app_state.cursor_speed_mode--;
             ui_cursor_speed_redraw_indicator();
+            ui_cursor_speed_update_settings();
+        }
     }
 }
 
@@ -313,7 +353,7 @@ static void ui_process_input(bool cursor_in_drawing) {
     cursor_last_y = app_state.cursor_y;
 
     if (!cursor_in_drawing) {
-        // For the main UI area there is only one speed of cursor movement (fast)
+        // For the main UI area there is only one speed of cursor movement (fast, with no inertia)
         if      (KEYS() & J_LEFT)  { if (app_state.cursor_x > CURSOR_SPEED_UI) app_state.cursor_x -= CURSOR_SPEED_UI; }
         else if (KEYS() & J_RIGHT) { if (app_state.cursor_x < (SCREEN_X_MAX_16U - CURSOR_SPEED_UI)) app_state.cursor_x += CURSOR_SPEED_UI; }
 
@@ -321,26 +361,46 @@ static void ui_process_input(bool cursor_in_drawing) {
         else if (KEYS() & J_DOWN) { if (app_state.cursor_y < (SCREEN_Y_MAX_16U - CURSOR_SPEED_UI)) app_state.cursor_y += CURSOR_SPEED_UI; }
     }
     else {
-        // Drawing area cursor handling
-        uint16_t cursor_speed;
-        bool     continuous_move = true;
+        // Drawing area cursor handling has inertia and an acceleration factor
 
-        switch (app_state.cursor_speed_mode) {
-            // Pixel step mode only moves on first press
-            case CURSOR_SPEED_MODE_PIXELSTEP: cursor_speed = CURSOR_SPEED_PIXELSTEP; continuous_move = false; break;
-            // All other modes move as long as button pressed
-            case CURSOR_SPEED_MODE_SLOW:      cursor_speed = CURSOR_SPEED_SLOW; break;
-            default:
-            case CURSOR_SPEED_MODE_MEDIUM:    cursor_speed = CURSOR_SPEED_NORMAL; break;
-            case CURSOR_SPEED_MODE_FAST:      cursor_speed = CURSOR_SPEED_FAST; break;
+        if (cursor_continuous_move || KEY_TICKED(J_DPAD)) {
+
+            // Ramp speed up gradually instead of all at once, clamp to maximum speed
+            if (KEY_PRESSED(J_LEFT) && (app_state.cursor_accel_x > -cursor_accel_limit)) {
+                app_state.cursor_accel_x -= cursor_accel_increment;
+            }
+            else if (KEY_PRESSED(J_RIGHT) && (app_state.cursor_accel_x < cursor_accel_limit)) {
+                app_state.cursor_accel_x += cursor_accel_increment;
+            }
+
+            if (KEY_PRESSED(J_UP) && (app_state.cursor_accel_y > -cursor_accel_limit)) {
+                app_state.cursor_accel_y -= cursor_accel_increment;
+            }
+            else if (KEY_PRESSED(J_DOWN) && (app_state.cursor_accel_y < cursor_accel_limit)) {
+                app_state.cursor_accel_y += cursor_accel_increment;
+            }
+        }
+        if (!KEY_PRESSED(J_ANY)) {
+            // Reset inertia if all buttons released (D-Pad or otherwise), brings cursor to immediate stop
+            app_state.cursor_accel_y = 0;
+            app_state.cursor_accel_x = 0;
         }
 
-        if (continuous_move || KEY_TICKED(J_DPAD)) {
-            if      (KEY_PRESSED(J_LEFT))  { if (app_state.cursor_x > cursor_speed) app_state.cursor_x -= cursor_speed; }
-            else if (KEY_PRESSED(J_RIGHT)) { if (app_state.cursor_x < (SCREEN_X_MAX_16U - cursor_speed)) app_state.cursor_x += cursor_speed; }
+        // Apply inertia to cursor position
+        app_state.cursor_y += app_state.cursor_accel_y;
+        app_state.cursor_x += app_state.cursor_accel_x;
 
-            if      (KEY_PRESSED(J_UP))    { if (app_state.cursor_y > cursor_speed) app_state.cursor_y -= cursor_speed; }
-            else if (KEY_PRESSED(J_DOWN))  { if (app_state.cursor_y < (SCREEN_Y_MAX_16U - cursor_speed)) app_state.cursor_y += cursor_speed; }
+        if (cursor_continuous_move) {
+            // Clamp down to remove drift
+            if ((app_state.cursor_accel_x > -8) & (app_state.cursor_accel_x < 8)) app_state.cursor_accel_x = 0;
+            if ((app_state.cursor_accel_y > -8) & (app_state.cursor_accel_y < 8)) app_state.cursor_accel_y = 0;
+
+            if (app_state.cursor_accel_x != 0) app_state.cursor_accel_x -= app_state.cursor_accel_x / cursor_accel_factor;
+            if (app_state.cursor_accel_y != 0) app_state.cursor_accel_y -= app_state.cursor_accel_y / cursor_accel_factor;
+        } else {
+            // No inertia in pixel step mode
+            app_state.cursor_accel_y = 0;
+            app_state.cursor_accel_x = 0;
         }
 
         // Clamp cursor to drawing area if a tool is actively drawing
