@@ -13,5 +13,6 @@ void drawing_restore_from_sram(uint8_t sram_bank, uint8_t save_slot) BANKED;
 
 void drawing_take_undo_snapshot(void) BANKED;
 void drawing_restore_undo_snapshot(bool take_redo_snapshot) BANKED;
+void drawing_restore_redo_snapshot(void) BANKED;
 
 #endif // SAVE_AND_UNDO_H

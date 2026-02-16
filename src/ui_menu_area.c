@@ -13,8 +13,7 @@
 #include "ui_main.h"
 #include "ui_menu_area.h"
 #include "save_and_undo.h"
-
-#include "save_and_undo.h"
+#include "help_screen.h"
 
 #include <ui_main_bg.h>      // BG APA style image
 #include <ui_main_bg_cde.h>  // BG APA style image  // CDE alternate theme

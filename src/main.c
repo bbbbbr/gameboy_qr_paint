@@ -8,6 +8,7 @@
 #include "draw.h"
 #include "ui_main.h"
 #include "save_and_undo.h"
+#include "help_screen.h"
 
 void make_and_show_qrcode(void);
 
