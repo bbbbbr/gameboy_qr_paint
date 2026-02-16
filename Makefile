@@ -67,6 +67,7 @@ OBJDIR      = obj/$(EXT)
 RESOBJSRC   = $(OBJDIR)/res
 RESDIR      = res
 BINDIR      = build/$(EXT)
+SAVDIR      = sav
 MKDIRS      = $(OBJDIR) $(BINDIR) $(RESOBJSRC) # See bottom of Makefile for directory auto-creation
 
 CFLAGS += -I$(RESOBJSRC)
@@ -156,7 +157,7 @@ qrcodeluts:
 package:
 	mkdir -p "$(PACKAGE_DIR)"
 #	zip -j -9 "$(PACKAGE_DIR)/$(VERSION)_$(PROJECTNAME)_megaduck.zip"            README.md build/duck/*.duck
-	zip -j -9 "$(PACKAGE_DIR)/$(VERSION)_$(PROJECTNAME)_gameboy.zip"             LICENSE README.md build/gbc/*.gbc
+	zip -j -9 "$(PACKAGE_DIR)/$(VERSION)_$(PROJECTNAME)_gameboy.zip"             LICENSE README.md build/gbc/*.gbc $(SAVDIR)/$(PROJECTNAME).sav
 
 
 # Include available build targets
