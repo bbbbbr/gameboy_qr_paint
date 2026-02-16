@@ -68,3 +68,8 @@ drawing image that was exported as a QRCode.
 - Emulicious
 - ImHex
 
+ he QRCode generator is an optimized fork of https://github.com/bbbbbr/gameboy_qrcode which is a fork of msx_qrcode https://github.com/MartinezTorres/msx_qrcode/tree/master
+
+Which in turn is a fork of Nayuki's QR Code: https://github.com/nayuki/QR-Code-generator
+
+
