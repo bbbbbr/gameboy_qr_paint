@@ -113,8 +113,6 @@ void draw_update(uint8_t cursor_8u_x, uint8_t cursor_8u_y) BANKED {
 }
 
 
-// Should now only be called by ui_redraw_after_qrcode()
-//
 // Clear any pending tool behavior and state
 // May be called when switching tools/etc
 void draw_tools_cancel_and_reset(void) BANKED {

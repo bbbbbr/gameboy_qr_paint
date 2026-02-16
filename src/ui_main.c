@@ -94,9 +94,6 @@ void ui_update(void) BANKED {
 
 void ui_redraw_after_qrcode(void) BANKED {
 
-    // Cancel any pending tool use
-    draw_tools_cancel_and_reset();
-
     // Refresh the UI
     ui_redraw_menus_all();
 

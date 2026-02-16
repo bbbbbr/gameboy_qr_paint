@@ -14,6 +14,9 @@ void make_and_show_qrcode(void);
 
 void make_and_show_qrcode(void) {
 
+    // Cancel any pending tool use
+    draw_tools_cancel_and_reset();
+
     drawing_take_undo_snapshot();  // This means generating a QRCode clears out any Redo queue entries that might be present
     image_to_png_qrcode_url();
     set_pal_qrmode();
