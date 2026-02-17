@@ -1,12 +1,14 @@
 
 # GameBoy QR-Paint
 bbbbbr 2026
-https://github.com/bbbbbr/gameboy_qr_paint
 
 
 ## Overview
 Draw on the Game Boy and share it direct to your phone using a QRCode!
 (without the internet!)
+
+### ROM
+Downloadable ROM available on itch: https://bbbbbr.itch.io/game-boy-qr-paint
 
 ![Photograph of QR Paint on a Game Boy Color with a drawing of a dogcow](/info/qrpaint_0.90_dogcow_on_cgb_sm.jpg)
 ![Photograph of QR Paint showing a QRCode on a Game Boy Color which encodes the dogcow drawing, and a mobile phone showing the transferred image in a web browser](/info/qrpaint_0.90_dogcow_qrcode_on_cgb_and_mobile_sm.jpg)
@@ -38,14 +40,24 @@ which otherwise tends toward right angles and diagonals.
 
 
 ## Sending to Mobile Phone
-Known working QRCode scanners:
+
+### Scanners
+Known **working** QRCode scanners:
 - Android Binary Eye
 - Android Camera (in scan mode)
+- Web: https://scanqr.org
 
-Known working Browsers
+Known **not working** scanners:
+- "Camera" app on some Samsung phones
+
+### Browsers
+Known **working** Browsers:
 (via "share-to" or pasting in the url, not via the browser's own scanner)
 - Firefox/Fennec Web Browser (Android mobile, Linux desktop)
 - Chromium (Linux desktop)
+
+Known **not working** Browsers:
+- Chromium/Chrome (Android)
 
 
 ## Techincal details
