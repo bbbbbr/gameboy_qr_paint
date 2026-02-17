@@ -53,7 +53,7 @@ The drawing is limited to 96x96 monochrome pixels due to QRCode
 size limits and the current lack of PNG DEFLATE compression.
 
 The process is:
-- Convery: GB Drawing -> Indexed PNG -> Base64 Encode -> mime url -> QRCode
+- Convert: GB Drawing -> Indexed PNG -> Base64 Encode -> mime url -> QRCode
 - Share to phone: QRCode -> Scanner app -> Share to Web Browser
 
 
