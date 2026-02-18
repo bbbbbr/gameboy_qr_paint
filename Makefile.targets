@@ -3,6 +3,7 @@
 ifneq ($(strip $(PORT)),)
 ifneq ($(strip $(PLAT)),)
 CFLAGS += -m$(PORT):$(PLAT)
+LCCFLAGS += -m$(PORT):$(PLAT)
 endif
 endif
 
