@@ -5,7 +5,7 @@
 void ui_init(void) NONBANKED;
 void ui_update(void) BANKED;
 
-void ui_redraw_after_qrcode(void) BANKED;
+void ui_redraw_full(void) BANKED;
 
 void ui_draw_width_cycle(void) BANKED;
 

@@ -13,6 +13,7 @@
 
 #pragma bank 255  // Autobanked
 
+static bool is_startup_help = true;
 
 // Draws the paint working area
 void help_page_show(void) NONBANKED {
@@ -30,9 +31,14 @@ void help_page_show(void) NONBANKED {
     // DISPLAY_ON;
 
     waitpadticked_lowcpu(J_ANY);
-    waitpadup();
 
-    ui_redraw_after_qrcode();
+    if (is_startup_help) {
+        // Alternate Solaris CDE theme by pressing select on first help screen
+        if (KEY_PRESSED(J_SELECT)) app_state.solaris_cde_ui_theme = true;
+        is_startup_help = false;
+    }
+
+    ui_redraw_full();
     drawing_restore_undo_snapshot(UNDO_RESTORE_WITHOUT_REDO_SNAPSHOT);  // Don't create a Redo snapshot since it would be of the QRCode overlay on the drawing image
 
     SHOW_SPRITES;

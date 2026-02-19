@@ -103,7 +103,7 @@ void ui_update(void) BANKED {
 }
 
 
-void ui_redraw_after_qrcode(void) BANKED {
+void ui_redraw_full(void) BANKED {
 
     // Refresh the UI
     ui_redraw_menus_all();

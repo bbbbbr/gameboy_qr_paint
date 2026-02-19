@@ -10,6 +10,9 @@ app_state_t app_state;
 
 void app_state_reset(void) BANKED {
 
+    // UI Style
+    app_state.solaris_cde_ui_theme = false;
+
     // Save and Undo related
     app_state.save_slot_current = DRAW_SAVE_SLOT_DEFAULT;
     app_state.file_confirm_check_counter = FILE_CONFIRM_CHECK_COUNT_RESET;

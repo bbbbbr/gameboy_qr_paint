@@ -46,8 +46,8 @@ void ui_redraw_menus_all(void) NONBANKED {
 
     uint8_t save_bank = CURRENT_BANK;
 
-    // Alternate CDE theme by holding SELECT
-    if (KEY_PRESSED(J_SELECT)) {
+    // Alternate CDE theme from holding SELECT on startup
+    if (app_state.solaris_cde_ui_theme) {
         SWITCH_ROM(BANK(ui_main_bg_cde));
         draw_image(ui_main_bg_cde_tiles);
         SWITCH_ROM(save_bank);

@@ -38,7 +38,7 @@ static void draw_tool_circle(uint8_t cursor_8u_x, uint8_t cursor_8u_y);
 static void draw_tool_eraser(uint8_t cursor_8u_x, uint8_t cursor_8u_y);
 static void draw_tool_floodfill(uint8_t cursor_8u_x, uint8_t cursor_8u_y);
 
-// Should now only be (indirectly) called by ui_redraw_after_qrcode()
+// Should now only be (indirectly) called by ui_redraw_full()
 // Can be remove if QRCode is changed from always-available START button press to a menu icon (that can't be accessed when tools are actively drawing)
 static void draw_tool_line_finalize_last_preview(void);
 static void draw_tool_rect_finalize_last_preview(void);

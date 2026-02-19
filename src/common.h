@@ -225,6 +225,9 @@ enum {
 
 typedef struct app_state_t {
 
+    // == UI ==
+    bool solaris_cde_ui_theme;
+
     // == Save and undo ==
     uint8_t save_slot_current;
     uint8_t file_confirm_check_counter;
