@@ -22,6 +22,12 @@ SOFTWARE.
 
 
 
+# GB-303 Cart Potentiometer polling code
+
+License: (CC BY 4.0) furrtek 2014~2015. http://creativecommons.org
+https://github.com/furrtek/GB303
+
+
  * QR Code generator library (C)
  * 
  * Copyright (c) Project Nayuki. (MIT License)
