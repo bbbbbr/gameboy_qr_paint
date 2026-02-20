@@ -362,11 +362,11 @@ static void ui_process_input(bool cursor_in_drawing) {
 
     if ((!cursor_in_drawing) || KEY_PRESSED(UI_CURSOR_SPEED_BUTTON)) {
         // For the main UI area there is only one speed of cursor movement (fast, with no inertia)
-        if      (KEYS() & J_LEFT)  { if (app_state.cursor_x > CURSOR_SPEED_UI) app_state.cursor_x -= CURSOR_SPEED_UI; }
-        else if (KEYS() & J_RIGHT) { if (app_state.cursor_x < (SCREEN_X_MAX_16U - CURSOR_SPEED_UI)) app_state.cursor_x += CURSOR_SPEED_UI; }
+        if      (KEYS() & J_LEFT)  { if (app_state.cursor_x > CURSOR_SPEED_UI_X) app_state.cursor_x -= CURSOR_SPEED_UI_X; }
+        else if (KEYS() & J_RIGHT) { if (app_state.cursor_x < (SCREEN_X_MAX_16U - CURSOR_SPEED_UI_X)) app_state.cursor_x += CURSOR_SPEED_UI_X; }
 
-        if      (KEYS() & J_UP)   { if (app_state.cursor_y > CURSOR_SPEED_UI) app_state.cursor_y -= CURSOR_SPEED_UI; }
-        else if (KEYS() & J_DOWN) { if (app_state.cursor_y < (SCREEN_Y_MAX_16U - CURSOR_SPEED_UI)) app_state.cursor_y += CURSOR_SPEED_UI; }
+        if      (KEYS() & J_UP)   { if (app_state.cursor_y > CURSOR_SPEED_UI_Y) app_state.cursor_y -= CURSOR_SPEED_UI_Y; }
+        else if (KEYS() & J_DOWN) { if (app_state.cursor_y < (SCREEN_Y_MAX_16U - CURSOR_SPEED_UI_Y)) app_state.cursor_y += CURSOR_SPEED_UI_Y; }
     }
     else {
         // Drawing area cursor handling has inertia and an acceleration factor
@@ -411,10 +411,11 @@ static void ui_process_input(bool cursor_in_drawing) {
             app_state.cursor_accel_x = 0;
         }
 
-        // Clamp cursor to drawing area if a tool is actively drawing
-        if (app_state.tool_currently_drawing) {
-            ui_clamp_cursor_to_draw_area();
-        }
+    }
+
+    // Clamp cursor to drawing area if a tool is actively drawing
+    if (app_state.tool_currently_drawing) {
+        ui_clamp_cursor_to_draw_area();
     }
 
     // Refresh the cached 8 bit cursor position

@@ -201,6 +201,8 @@ static void draw_tool_pencil(uint8_t cursor_8u_x, uint8_t cursor_8u_y) {
         if (tool_undo_snapshot_taken == false) {
             drawing_take_undo_snapshot();
             tool_undo_snapshot_taken = true;
+            tool_start_x = cursor_8u_x;
+            tool_start_y = cursor_8u_y;
         }
         app_state.tool_currently_drawing = true;
     }
@@ -212,6 +214,25 @@ static void draw_tool_pencil(uint8_t cursor_8u_x, uint8_t cursor_8u_y) {
 
     // Draw if active
     if (app_state.tool_currently_drawing) {
+
+        // If cursor speed button pressed, it moves faster than 1 pixel
+        // so draw another set of pencil marks.
+        // Line draw isn't a good match right now
+        // Pencil is currently the only tool that really has this speed issue
+        if (KEY_PRESSED(UI_CURSOR_SPEED_BUTTON)) {
+            uint8_t midpoint_x = (tool_start_x + cursor_8u_x) / 2u;
+            uint8_t midpoint_y = (tool_start_y + cursor_8u_y) / 2u;
+            if (app_state.draw_width == DRAW_WIDTH_MODE_1)
+                plot_point(midpoint_x, midpoint_y);
+            else if (app_state.draw_width == DRAW_WIDTH_MODE_2)
+                draw_tool_pencil_width_2(midpoint_x, midpoint_y);
+            else // Implied: DRAW_WIDTH_MODE_3
+                draw_tool_pencil_width_3(midpoint_x, midpoint_y);
+
+            tool_start_x = cursor_8u_x;
+            tool_start_y = cursor_8u_y;
+        }
+
         if (app_state.draw_width == DRAW_WIDTH_MODE_1)
             plot_point(cursor_8u_x, cursor_8u_y);
         else if (app_state.draw_width == DRAW_WIDTH_MODE_2)

@@ -131,7 +131,8 @@
 #define CURSOR_SPEED_FAST       (CURSOR_8U_TO_16U(1u))
 #define CURSOR_SPEED_NORMAL     (CURSOR_8U_TO_16U(1u) / 2u)
 #define CURSOR_SPEED_SLOW       (CURSOR_8U_TO_16U(1u) / 5u)
-#define CURSOR_SPEED_UI         (CURSOR_8U_TO_16U(1u) + (CURSOR_8U_TO_16U(1u) / 2u))
+#define CURSOR_SPEED_UI_X       (CURSOR_8U_TO_16U(1u) + (CURSOR_8U_TO_16U(1u) / 2u))
+#define CURSOR_SPEED_UI_Y       ((CURSOR_SPEED_UI_X) - (CURSOR_8U_TO_16U(1u) / 6u)) // Offset a little vs X to disperse stair stepping on diagonals some
 
 // Acceleration and deceleration factor of CURSOR_SPEED_...
 #define CURSOR_ACCEL_FACTOR_FULL       1u  //  1/1
