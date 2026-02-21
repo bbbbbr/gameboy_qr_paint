@@ -5,13 +5,18 @@
 
 #include "gbprinter.h"
 
-#include <gbdk/emu_debug.h>  // Sensitive to duplicated line position across source files
-
 #pragma bank 255  // Autobanked
 
 #define REINIT_SEIKO
 
-#define START_TRANSFER          0x81
+#define START_TRANSFER 0x81
+#if (CGB_FAST_TRANSFER==1)
+    // 0b10000011 - start, CGB double speed, internal clock
+    #define START_TRANSFER_FAST 0x83
+#else
+    // 0b10000001 - start, internal clock
+    #define START_TRANSFER_FAST 0x81
+#endif
 #define PRN_BUSY_TIMEOUT        PRN_SECONDS(2)
 #define PRN_COMPLETION_TIMEOUT  PRN_SECONDS(20)
 #define PRN_SEIKO_RESET_TIMEOUT 10
@@ -32,6 +37,7 @@ start_print_pkt_t PRN_PKT_START = {
 static uint16_t printer_status;
 static uint8_t printer_tile_num;
 
+uint8_t printer_completion = 0;
 static uint8_t printer_send_receive(uint8_t b) {
     SB_REG = b;
     SC_REG = 0x81;
@@ -99,29 +105,36 @@ uint8_t gbprinter_detect(uint8_t delay) BANKED {
     return printer_wait(delay, PRN_STATUS_MASK_ANY, PRN_STATUS_OK);
 }
 
-/*
-uint8_t gbprinter_print_image(const uint8_t * image_map, const uint8_t * image, int8_t pos_x, uint8_t width, uint8_t height) BANKED {
-    static const uint8_t * img;
+
+#define TILE_BANK_0 _VRAM8800
+#define TILE_BANK_1 _VRAM8000
+
+#define TILE_BYTES_SZ              (16u)
+#define APA_TILE_SRC_TOGGLE_TILE_Y (72u / 8u)
+#define APA_TILE_NUM_UPPER_START   (128u)
+
+// Prints the requested tile region of the screen in APA mode, tiles outside the screen are printed WHITE
+// Display should be turned off before calling
+uint8_t gbprinter_print_screen_rect(uint8_t sx, uint8_t sy, uint8_t sw, uint8_t sh, uint8_t centered) BANKED {
     static uint8_t error;
 
-    uint8_t tile_data[16], rows = (((height + 1) >> 1) << 1), pkt_count = 0;
+    // call printer progress: zero progress
+    printer_completion = 0; // call_far(&printer_progress_handler);
 
-    if ((rows >> 1) == 0) return PRN_STATUS_OK;
-
-    img = image;
+    uint8_t tile_data[0x10], rows = ((sh & 0x01) ? (sh + 1) : sh), pkt_count = 0, x_ofs = (centered) ? ((PRN_TILE_WIDTH - sw) >> 1) : 0;
 
     printer_tile_num = 0;
 
     for (uint8_t y = 0; y != rows; y++) {
-        for (int16_t x = 0; x != PRN_TILE_WIDTH; x++) {
-            // overlay the picture tile if in range
-            if ((y < height) && (x >= pos_x) && (x < (pos_x + width))) {
-                uint8_t tile = image_map[(y * width) + (x - pos_x)];
-                memcpy(tile_data, img + ((uint16_t)tile << 4), sizeof(tile_data));
-            } else {
-                memset(tile_data, 0, sizeof(tile_data));
-            }
-            // print the resulting tile
+        uint8_t * map_addr = get_bkg_xy_addr(sx, y + sy);
+        for (uint8_t x = 0; x != PRN_TILE_WIDTH; x++) {
+            if ((x >= x_ofs) && (x < (x_ofs + sw)) && (y < sh))  {
+
+                uint8_t tile = get_vram_byte(map_addr++);
+                uint8_t * source = (((y + sy) >= APA_TILE_SRC_TOGGLE_TILE_Y) && (tile < APA_TILE_NUM_UPPER_START)) ? _VRAM9000 : _VRAM8000;
+                vmemcpy(tile_data, source + ((uint16_t)tile << 4), sizeof(tile_data));
+
+            } else memset(tile_data, 0x00, sizeof(tile_data));
             if (printer_print_tile(tile_data)) {
                 pkt_count++;
                 if (printer_check_cancel()) {
@@ -132,7 +145,6 @@ uint8_t gbprinter_print_image(const uint8_t * image_map, const uint8_t * image, 
             if (pkt_count == 9) {
                 pkt_count = 0;
                 PRINTER_SEND_COMMAND(PRN_PKT_EOF);
-                // setup margin if last packet
                 gbprinter_set_print_params((y == (rows - 1)) ? PRN_FINAL_MARGIN : PRN_NO_MARGINS, PRN_PALETTE_NORMAL, PRN_EXPOSURE_DARK);
                 PRINTER_SEND_COMMAND(PRN_PKT_START);
                 // query printer status
@@ -145,99 +157,25 @@ uint8_t gbprinter_print_image(const uint8_t * image_map, const uint8_t * image, 
                     if (error = printer_wait(PRN_SEIKO_RESET_TIMEOUT, PRN_STATUS_MASK_ANY, PRN_STATUS_OK)) return error;
                 }
 #endif
+                // call printer progress callback
+                uint8_t current_progress = (((uint16_t)y * PRN_MAX_PROGRESS) / rows);
+                if (printer_completion != current_progress) {
+                    printer_completion = current_progress; //, call_far(&printer_progress_handler);
+                }
             }
         }
     }
     if (pkt_count) {
         PRINTER_SEND_COMMAND(PRN_PKT_EOF);
         // setup printing if required
+
         gbprinter_set_print_params(PRN_FINAL_MARGIN, PRN_PALETTE_NORMAL, PRN_EXPOSURE_DARK);
         PRINTER_SEND_COMMAND(PRN_PKT_START);
         // query printer status
         if ((error = printer_wait(PRN_BUSY_TIMEOUT, PRN_STATUS_BUSY, PRN_STATUS_BUSY)) & PRN_STATUS_MASK_ERRORS) return error;
         if ((error = printer_wait(PRN_COMPLETION_TIMEOUT, PRN_STATUS_BUSY, 0)) & PRN_STATUS_MASK_ERRORS) return error;
-    }
-    return PRINTER_SEND_COMMAND(PRN_PKT_STATUS);
-}
-*/
-
-
-#define TILE_BYTES_SZ              (16u)
-#define APA_TILE_SRC_TOGGLE_TILE_Y (72u / 8u)
-#define APA_TILE_NUM_UPPER_START   (128u)
-
-// Prints the requested tile region of the screen in APA mode, tiles outside the screen are printed WHITE
-// Display should be turned off before calling
-uint8_t gbprinter_print_screen_apa(uint8_t tile_x_start,uint8_t tile_y_start,uint8_t tile_x_end,uint8_t tile_y_end) BANKED {
-    static const uint8_t * img;
-    static uint8_t error;
-
-    uint8_t tile_data[16], pkt_count = 0;
-
-    printer_tile_num = 0;
-
-    // Print size is entire GB screen size
-    for (uint16_t tile_y = 0; tile_y < DEVICE_SCREEN_HEIGHT; tile_y++) {
-        for (uint16_t tile_x = 0; tile_x < PRN_TILE_WIDTH; tile_x++) {
-
-            // If this is a tile within the active print area then print it
-            // Otherwise print an empty tile
-            if ((tile_x >= tile_x_start) && (tile_x <= tile_x_end) &&
-                (tile_y >= tile_y_start) && (tile_y <= tile_y_end)) 
-            {
-                // Get tile_id from hardware map
-                uint16_t tile_id = get_vram_byte(_SCRN0 + (tile_y * DEVICE_SCREEN_BUFFER_WIDTH) + tile_x);
-                uint8_t * p_vram = _VRAM8000;
-
-                // Mid-way through the screen APA mode switches from low tile index values
-                // sourced from 0x8000 to 0x9000
-                if ((tile_y >= APA_TILE_SRC_TOGGLE_TILE_Y) && (tile_id < APA_TILE_NUM_UPPER_START))
-                    p_vram = _VRAM9000;
-
-                // Calculate offset into tile data based on tile id                
-                p_vram += (tile_id * TILE_BYTES_SZ);
-                // EMU_printf("%u,%u tile_id=%hu, vram=%x\n", (uint16_t)tile_x, (uint16_t)tile_y, (uint8_t)tile_id, p_vram);
-                vmemcpy(tile_data, p_vram, sizeof(tile_data));
-            } else {
-                // EMU_printf("%u,%u [BORDER]\n", (uint16_t)tile_x, (uint16_t)tile_y);
-                vmemset(tile_data, 0, sizeof(tile_data));
-            }
-
-            // print the resulting tile
-            if (printer_print_tile(tile_data)) {
-                pkt_count++;
-                if (printer_check_cancel()) {
-                    PRINTER_SEND_COMMAND(PRN_PKT_CANCEL);
-                    return PRN_STATUS_CANCELLED;
-                }
-            }
-            if (pkt_count == 9) {
-                pkt_count = 0;
-                PRINTER_SEND_COMMAND(PRN_PKT_EOF);
-                // setup margin if last packet
-                gbprinter_set_print_params((tile_y == (DEVICE_SCREEN_HEIGHT - 1)) ? PRN_FINAL_MARGIN : PRN_NO_MARGINS, PRN_PALETTE_NORMAL, PRN_EXPOSURE_DARK);
-                PRINTER_SEND_COMMAND(PRN_PKT_START);
-                // query printer status
-                if ((error = printer_wait(PRN_BUSY_TIMEOUT, PRN_STATUS_BUSY, PRN_STATUS_BUSY)) & PRN_STATUS_MASK_ERRORS) return error;
-                if ((error = printer_wait(PRN_COMPLETION_TIMEOUT, PRN_STATUS_BUSY, 0)) & PRN_STATUS_MASK_ERRORS) return error;
-#ifdef REINIT_SEIKO
-                // reinit printer (required by Seiko?)
-                if (tile_y != (DEVICE_SCREEN_HEIGHT - 1)) {
-                    PRINTER_SEND_COMMAND(PRN_PKT_INIT);
-                    if (error = printer_wait(PRN_SEIKO_RESET_TIMEOUT, PRN_STATUS_MASK_ANY, PRN_STATUS_OK)) return error;
-                }
-#endif
-            }
-        }
-    }
-    if (pkt_count) {
-        PRINTER_SEND_COMMAND(PRN_PKT_EOF);
-        // setup printing if required
-        gbprinter_set_print_params(PRN_FINAL_MARGIN, PRN_PALETTE_NORMAL, PRN_EXPOSURE_DARK);
-        PRINTER_SEND_COMMAND(PRN_PKT_START);
-        // query printer status
-        if ((error = printer_wait(PRN_BUSY_TIMEOUT, PRN_STATUS_BUSY, PRN_STATUS_BUSY)) & PRN_STATUS_MASK_ERRORS) return error;
-        if ((error = printer_wait(PRN_COMPLETION_TIMEOUT, PRN_STATUS_BUSY, 0)) & PRN_STATUS_MASK_ERRORS) return error;
+        // indicate 100% completion
+        printer_completion = PRN_MAX_PROGRESS; //, call_far(&printer_progress_handler);
     }
     return PRINTER_SEND_COMMAND(PRN_PKT_STATUS);
 }
