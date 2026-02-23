@@ -114,7 +114,6 @@ uint8_t gbprinter_detect(uint8_t delay) BANKED {
 #define APA_TILE_NUM_UPPER_START   (128u)
 
 // Prints the requested tile region of the screen in APA mode, tiles outside the screen are printed WHITE
-// Display should be turned off before calling
 uint8_t gbprinter_print_screen_rect(uint8_t sx, uint8_t sy, uint8_t sw, uint8_t sh, uint8_t centered) BANKED {
     static uint8_t error;
 
