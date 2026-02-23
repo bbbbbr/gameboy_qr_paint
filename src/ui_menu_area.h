@@ -76,10 +76,10 @@
 
     // Undo and Redo buttons are actually sprites to make it cheaper to turn on/off
     #define UNDO_BUTTON_SPR_X   ((RIGHT_MENU_X_START + 7u) + (uint8_t)DEVICE_SPRITE_PX_OFFSET_X)
-    #define UNDO_BUTTON_SPR_Y   ((RIGHT_MENU_Y_START + (RIGHT_MENU_UNDO * RIGHT_MENU_ITEM_HEIGHT) + 4u) + DEVICE_SPRITE_PX_OFFSET_Y)
+    #define UNDO_BUTTON_SPR_Y   ((RIGHT_MENU_Y_START + (RIGHT_MENU_UNDO * RIGHT_MENU_ITEM_HEIGHT) + 4u) + (uint8_t)DEVICE_SPRITE_PX_OFFSET_Y)
 
     #define REDO_BUTTON_SPR_X   ((RIGHT_MENU_X_START + 5u) + (uint8_t)DEVICE_SPRITE_PX_OFFSET_X)
-    #define REDO_BUTTON_SPR_Y   ((RIGHT_MENU_Y_START + (RIGHT_MENU_REDO * RIGHT_MENU_ITEM_HEIGHT) + 4u) + DEVICE_SPRITE_PX_OFFSET_Y)
+    #define REDO_BUTTON_SPR_Y   ((RIGHT_MENU_Y_START + (RIGHT_MENU_REDO * RIGHT_MENU_ITEM_HEIGHT) + 4u) + (uint8_t)DEVICE_SPRITE_PX_OFFSET_Y)
 
     // Speed Button (update handled in ui_main)
     #define CURSOR_SPEED_IND_ROW1_TILE_ID       253u // Index of tile in apa image mode
@@ -95,15 +95,15 @@
 
 
     // Draw Width indicator button
-    #define DRAW_WIDTH_IND_SPR_X                ((RIGHT_MENU_X_START) + DEVICE_SPRITE_PX_OFFSET_X)
-    #define DRAW_WIDTH_IND_SPR_Y                ((RIGHT_MENU_Y_START + ((RIGHT_MENU_DRAW_WIDTH - 1u) * RIGHT_MENU_ITEM_HEIGHT) + 11u) + DEVICE_SPRITE_PX_OFFSET_Y)
+    #define DRAW_WIDTH_IND_SPR_X                ((RIGHT_MENU_X_START) + (uint8_t)DEVICE_SPRITE_PX_OFFSET_X)
+    #define DRAW_WIDTH_IND_SPR_Y                ((RIGHT_MENU_Y_START + ((RIGHT_MENU_DRAW_WIDTH - 1u) * RIGHT_MENU_ITEM_HEIGHT) + 11u) + (uint8_t)DEVICE_SPRITE_PX_OFFSET_Y)
 
     #define DRAW_WIDTH_SPR_STEP_X               7u
 
     // Print
     // File confirm check sprite
-    #define PRINT_CONFIRM_CHECK_SPR_X           ((RIGHT_MENU_X_START) + 3u + DEVICE_SPRITE_PX_OFFSET_Y)
-    #define PRINT_CONFIRM_CHECK_SPR_Y           ((RIGHT_MENU_Y_START + ((RIGHT_MENU_PRINT - 1u) * RIGHT_MENU_ITEM_HEIGHT) + 17u) + DEVICE_SPRITE_PX_OFFSET_Y)
+    #define PRINT_CONFIRM_CHECK_SPR_X           ((RIGHT_MENU_X_START) + 3u + (uint8_t)DEVICE_SPRITE_PX_OFFSET_Y)
+    #define PRINT_CONFIRM_CHECK_SPR_Y           ((RIGHT_MENU_Y_START + ((RIGHT_MENU_PRINT - 1u) * RIGHT_MENU_ITEM_HEIGHT) + 17u) + (uint8_t)DEVICE_SPRITE_PX_OFFSET_Y)
 
 
 // ===== (BOTTOM) FILE MENU =====
@@ -124,8 +124,8 @@
 
 
     // File confirm check sprite
-    #define FILE_CONFIRM_CHECK_SPR_X(slot_num)  ((((slot_num + FILE_MENU_START_OF_SAVE_SLOTS_OFFSET) * FILE_MENU_ITEM_WIDTH) + FILE_MENU_X_START) + 10u + DEVICE_SPRITE_PX_OFFSET_X)
-    #define FILE_CONFIRM_CHECK_SPR_Y            ((FILE_MENU_Y_START) - 3u + DEVICE_SPRITE_PX_OFFSET_Y)
+    #define FILE_CONFIRM_CHECK_SPR_X(slot_num)  ((((slot_num + FILE_MENU_START_OF_SAVE_SLOTS_OFFSET) * FILE_MENU_ITEM_WIDTH) + FILE_MENU_X_START) + 10u + (uint8_t)DEVICE_SPRITE_PX_OFFSET_X)
+    #define FILE_CONFIRM_CHECK_SPR_Y            ((FILE_MENU_Y_START) - 3u + (uint8_t)DEVICE_SPRITE_PX_OFFSET_Y)
 
 
 void ui_redraw_menus_all(void) NONBANKED;
