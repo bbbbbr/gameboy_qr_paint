@@ -4,6 +4,7 @@
 #include <stdbool.h>
 
 #include "gbprinter.h"
+#include "common.h"
 
 #pragma bank 255  // Autobanked
 
@@ -20,8 +21,10 @@
 #define PRN_BUSY_TIMEOUT        PRN_SECONDS(2)
 #define PRN_COMPLETION_TIMEOUT  PRN_SECONDS(20)
 #define PRN_SEIKO_RESET_TIMEOUT 10
+#define PRN_FULL_TIMEOUT        PRN_SECONDS(2)
 
 #define PRN_FINAL_MARGIN        0x03
+#define PRN_STATUS_MASK_ERRORS_AND_SUM (PRN_STATUS_MASK_ERRORS | PRN_STATUS_SUM)
 
 static const uint8_t PRN_PKT_INIT[]    = { PRN_LE(PRN_MAGIC), PRN_LE(PRN_CMD_INIT),   PRN_LE(0), PRN_LE(0x01), PRN_LE(0) };
 static const uint8_t PRN_PKT_STATUS[]  = { PRN_LE(PRN_MAGIC), PRN_LE(PRN_CMD_STATUS), PRN_LE(0), PRN_LE(0x0F), PRN_LE(0) };
@@ -94,7 +97,7 @@ static uint8_t printer_wait(uint16_t timeout, uint8_t mask, uint8_t value) {
             return PRN_STATUS_CANCELLED;
         }
         if (timeout-- == 0) return PRN_STATUS_MASK_ERRORS;
-        if (error & PRN_STATUS_MASK_ERRORS) break;
+        if (error & PRN_STATUS_MASK_ERRORS_AND_SUM) break;
         vsync();
     }
     return error;
@@ -112,6 +115,32 @@ uint8_t gbprinter_detect(uint8_t delay) BANKED {
 #define TILE_BYTES_SZ              (16u)
 #define APA_TILE_SRC_TOGGLE_TILE_Y (72u / 8u)
 #define APA_TILE_NUM_UPPER_START   (128u)
+#define PRN_TILE_CACHE_MAX_TILES   (IMG_WIDTH_TILES * IMG_HEIGHT_TILES)
+
+// Cached tile data for the draw canvas (12x12 tiles).
+// Capture first, then print from this stable buffer.
+static uint8_t printer_tile_cache[PRN_TILE_CACHE_MAX_TILES * TILE_BYTES_SZ];
+
+static uint8_t capture_screen_rect_tiles_apa(uint8_t sx, uint8_t sy, uint8_t sw, uint8_t sh) {
+    const uint16_t tile_count = (uint16_t)sw * (uint16_t)sh;
+    if (tile_count > PRN_TILE_CACHE_MAX_TILES) return PRN_STATUS_MASK_ERRORS;
+
+    uint8_t * p_out = printer_tile_cache;
+
+    DISPLAY_OFF;
+    for (uint8_t y = 0; y != sh; y++) {
+        uint8_t * map_addr = get_bkg_xy_addr(sx, y + sy);
+        for (uint8_t x = 0; x != sw; x++) {
+            uint8_t tile = get_vram_byte(map_addr++);
+            uint8_t * source = (((y + sy) >= APA_TILE_SRC_TOGGLE_TILE_Y) && (tile < APA_TILE_NUM_UPPER_START)) ? _VRAM9000 : _VRAM8000;
+            vmemcpy(p_out, source + ((uint16_t)tile << 4), TILE_BYTES_SZ);
+            p_out += TILE_BYTES_SZ;
+        }
+    }
+    DISPLAY_ON;
+
+    return PRN_STATUS_OK;
+}
 
 // Prints the requested tile region of the screen in APA mode, tiles outside the screen are printed WHITE
 uint8_t gbprinter_print_screen_rect(uint8_t sx, uint8_t sy, uint8_t sw, uint8_t sh, uint8_t centered) BANKED {
@@ -124,15 +153,17 @@ uint8_t gbprinter_print_screen_rect(uint8_t sx, uint8_t sy, uint8_t sw, uint8_t 
 
     printer_tile_num = 0;
 
+    if ((sw == 0u) || (sh == 0u)) return PRN_STATUS_OK;
+
+    // Capture the requested tile rectangle up front to avoid VRAM reads
+    // during timing-sensitive serial printer transfers.
+    if ((error = capture_screen_rect_tiles_apa(sx, sy, sw, sh)) != PRN_STATUS_OK) return error;
+
     for (uint8_t y = 0; y != rows; y++) {
-        uint8_t * map_addr = get_bkg_xy_addr(sx, y + sy);
         for (uint8_t x = 0; x != PRN_TILE_WIDTH; x++) {
             if ((x >= x_ofs) && (x < (x_ofs + sw)) && (y < sh))  {
-
-                uint8_t tile = get_vram_byte(map_addr++);
-                uint8_t * source = (((y + sy) >= APA_TILE_SRC_TOGGLE_TILE_Y) && (tile < APA_TILE_NUM_UPPER_START)) ? _VRAM9000 : _VRAM8000;
-                vmemcpy(tile_data, source + ((uint16_t)tile << 4), sizeof(tile_data));
-
+                uint16_t tile_index = ((uint16_t)y * (uint16_t)sw) + ((uint16_t)x - (uint16_t)x_ofs);
+                memcpy(tile_data, printer_tile_cache + (tile_index * TILE_BYTES_SZ), sizeof(tile_data));
             } else memset(tile_data, 0x00, sizeof(tile_data));
             if (printer_print_tile(tile_data)) {
                 pkt_count++;
@@ -143,17 +174,18 @@ uint8_t gbprinter_print_screen_rect(uint8_t sx, uint8_t sy, uint8_t sw, uint8_t 
             }
             if (pkt_count == 9) {
                 pkt_count = 0;
-                PRINTER_SEND_COMMAND(PRN_PKT_EOF);
+                if ((error = PRINTER_SEND_COMMAND(PRN_PKT_EOF)) & PRN_STATUS_MASK_ERRORS_AND_SUM) return error;
+                if ((error = printer_wait(PRN_FULL_TIMEOUT, PRN_STATUS_FULL, PRN_STATUS_FULL)) & PRN_STATUS_MASK_ERRORS_AND_SUM) return error;
                 gbprinter_set_print_params((y == (rows - 1)) ? PRN_FINAL_MARGIN : PRN_NO_MARGINS, PRN_PALETTE_NORMAL, PRN_EXPOSURE_DARK);
-                PRINTER_SEND_COMMAND(PRN_PKT_START);
+                if ((error = PRINTER_SEND_COMMAND(PRN_PKT_START)) & PRN_STATUS_MASK_ERRORS_AND_SUM) return error;
                 // query printer status
-                if ((error = printer_wait(PRN_BUSY_TIMEOUT, PRN_STATUS_BUSY, PRN_STATUS_BUSY)) & PRN_STATUS_MASK_ERRORS) return error;
-                if ((error = printer_wait(PRN_COMPLETION_TIMEOUT, PRN_STATUS_BUSY, 0)) & PRN_STATUS_MASK_ERRORS) return error;
+                if ((error = printer_wait(PRN_BUSY_TIMEOUT, PRN_STATUS_BUSY, PRN_STATUS_BUSY)) & PRN_STATUS_MASK_ERRORS_AND_SUM) return error;
+                if ((error = printer_wait(PRN_COMPLETION_TIMEOUT, PRN_STATUS_BUSY, 0)) & PRN_STATUS_MASK_ERRORS_AND_SUM) return error;
 #ifdef REINIT_SEIKO
                 // reinit printer (required by Seiko?)
                 if (y != (rows - 1)) {
                     PRINTER_SEND_COMMAND(PRN_PKT_INIT);
-                    if (error = printer_wait(PRN_SEIKO_RESET_TIMEOUT, PRN_STATUS_MASK_ANY, PRN_STATUS_OK)) return error;
+                    if ((error = printer_wait(PRN_SEIKO_RESET_TIMEOUT, PRN_STATUS_MASK_ANY, PRN_STATUS_OK)) & PRN_STATUS_MASK_ERRORS_AND_SUM) return error;
                 }
 #endif
                 // call printer progress callback
@@ -165,14 +197,15 @@ uint8_t gbprinter_print_screen_rect(uint8_t sx, uint8_t sy, uint8_t sw, uint8_t 
         }
     }
     if (pkt_count) {
-        PRINTER_SEND_COMMAND(PRN_PKT_EOF);
+        if ((error = PRINTER_SEND_COMMAND(PRN_PKT_EOF)) & PRN_STATUS_MASK_ERRORS_AND_SUM) return error;
+        if ((error = printer_wait(PRN_FULL_TIMEOUT, PRN_STATUS_FULL, PRN_STATUS_FULL)) & PRN_STATUS_MASK_ERRORS_AND_SUM) return error;
         // setup printing if required
 
         gbprinter_set_print_params(PRN_FINAL_MARGIN, PRN_PALETTE_NORMAL, PRN_EXPOSURE_DARK);
-        PRINTER_SEND_COMMAND(PRN_PKT_START);
+        if ((error = PRINTER_SEND_COMMAND(PRN_PKT_START)) & PRN_STATUS_MASK_ERRORS_AND_SUM) return error;
         // query printer status
-        if ((error = printer_wait(PRN_BUSY_TIMEOUT, PRN_STATUS_BUSY, PRN_STATUS_BUSY)) & PRN_STATUS_MASK_ERRORS) return error;
-        if ((error = printer_wait(PRN_COMPLETION_TIMEOUT, PRN_STATUS_BUSY, 0)) & PRN_STATUS_MASK_ERRORS) return error;
+        if ((error = printer_wait(PRN_BUSY_TIMEOUT, PRN_STATUS_BUSY, PRN_STATUS_BUSY)) & PRN_STATUS_MASK_ERRORS_AND_SUM) return error;
+        if ((error = printer_wait(PRN_COMPLETION_TIMEOUT, PRN_STATUS_BUSY, 0)) & PRN_STATUS_MASK_ERRORS_AND_SUM) return error;
         // indicate 100% completion
         printer_completion = PRN_MAX_PROGRESS; //, call_far(&printer_progress_handler);
     }

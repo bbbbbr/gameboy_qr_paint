@@ -13,6 +13,12 @@
 
 #pragma bank 255  // Autobanked
 
+static bool printer_status_is_success(uint8_t status) {
+    // Treat only high-nibble printer error bits as fatal.
+    // Some printers may report non-fatal low bits after a successful print.
+    return ((status & PRN_STATUS_MASK_ERRORS) == 0u);
+}
+
 
 bool printer_check_cancel(void) BANKED {
     static uint8_t keys = 0, old_keys;
@@ -28,17 +34,34 @@ void print_drawing(void) BANKED {
     color(WHITE, BLACK, SOLID);
     gotogxy(5u,4u);
 
+    bool restore_fast_mode = false;
+    if (_cpu == CGB_TYPE) {
+        // Printer comms are more reliable in normal speed mode.
+        cpu_slow();
+        restore_fast_mode = true;
+    }
+
     bool printer_found = gbprinter_detect(PRINTER_DETECT_TIMEOUT) == PRN_STATUS_OK;
     if (printer_found) {
         // gbprinter_print_screen_apa(IMG_TILE_X_START, IMG_TILE_Y_START, IMG_TILE_X_END, IMG_TILE_Y_END);
-        gbprinter_print_screen_rect(IMG_TILE_X_START, IMG_TILE_Y_START, IMG_WIDTH_TILES, IMG_HEIGHT_TILES, true);
-        gprintf("Printing");
-        gotogxy(5u,5u);        
-        gprintf("Done");
+        uint8_t print_status = gbprinter_print_screen_rect(IMG_TILE_X_START, IMG_TILE_Y_START, IMG_WIDTH_TILES, IMG_HEIGHT_TILES, true);
+        if (printer_status_is_success(print_status)) {
+            gprintf("Printing");
+            gotogxy(5u,5u);
+            gprintf("Done");
+        } else {
+            gprintf("Print");
+            gotogxy(5u,5u);
+            gprintf("Failed");
+        }
     } else {
         gprintf("Printer");
         gotogxy(5u,5u);        
         gprintf("Not Found");
+    }
+
+    if (restore_fast_mode) {
+        cpu_fast();
     }
 
     waitpadup();
