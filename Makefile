@@ -135,7 +135,7 @@ clean:
 
 romusage:
 	# Ignores failure if romusage not in path
-	-romusage -g -sRp build/gbc/$(PROJECTNAME).noi
+	-romusage -smWRAM -g -sRp build/gbc/$(PROJECTNAME).noi
 
 pngcheck:
 	@echo --------------------------------------------------
