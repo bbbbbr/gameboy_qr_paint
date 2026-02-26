@@ -7,7 +7,7 @@ endif
 LCC = $(GBDK_HOME)bin/lcc
 PNG2ASSET = $(GBDK_HOME)bin/png2asset
 
-VERSION=0.9.1
+VERSION=0.9.2
 
 # Set platforms to build here, spaced separated. (These are in the separate Makefile.targets)
 # They can also be built/cleaned individually: "make gg" and "make gg-clean"
@@ -16,9 +16,9 @@ TARGETS= gbc pocket # megaduck gb pocket megaduck sms gg nes
 
 # Configure platform specific LCC flags here:
 LCCFLAGS_gb      = # -Wl-yt0x1B # Set an MBC for banking (1B-ROM+MBC5+RAM+BATT)
-LCCFLAGS_pocket  = -Wl-yt0x1B -Wm-yc # -Wl-yt0x1B # Usually the same as required for .gb
+LCCFLAGS_pocket  = -Wl-yt0x1B -Wm-yc -Wm-ys # -Wl-yt0x1B # Usually the same as required for .gb 
 LCCFLAGS_duck    = # -Wl-yt0x1B # Usually the same as required for .gb
-LCCFLAGS_gbc     = -Wl-yt0x1B -Wm-yc # Same as .gb with: -Wm-yc (gb & gbc) or Wm-yC (gbc exclusive)
+LCCFLAGS_gbc     = -Wl-yt0x1B -Wm-yc -Wm-ys # Same as .gb with: -Wm-yc (gb & gbc) or Wm-yC (gbc exclusive) -ys (SGB compat)
 LCCFLAGS_sms     =
 LCCFLAGS_gg      =
 LCCFLAGS_nes     =
