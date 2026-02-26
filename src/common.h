@@ -140,6 +140,11 @@
 #define CURSOR_ACCEL_FACTOR_NORMAL     6u  //  1/6th
 #define CURSOR_ACCEL_FACTOR_SLOW       6u  //  1/6h
 
+#define MOUSE_ACCEL_UPSHIFT_FAST       8u  // Plus adds in 
+#define MOUSE_ACCEL_UPSHIFT_NORMAL     8u
+#define MOUSE_ACCEL_UPSHIFT_SLOW       7u
+#define MOUSE_ACCEL_UPSHIFT_PIXELSTEP  6u
+
 enum {
     CURSOR_SPEED_MODE_MIN,
 

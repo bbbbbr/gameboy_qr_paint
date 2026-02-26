@@ -41,8 +41,9 @@ void help_page_show(void) NONBANKED {
     ui_redraw_full();
     drawing_restore_undo_snapshot(UNDO_RESTORE_WITHOUT_REDO_SNAPSHOT);  // Don't create a Redo snapshot since it would be of the QRCode overlay on the drawing image
 
-    waitpadup();
-    UPDATE_KEYS();
+    // Can't use gbdk lib waitpadup() when SGB mouse hook is running since
+    // it seems to OR in mouse data that is always high, causing a hang
+    waitpadup_lowcpu(J_ANY);
 
     SHOW_SPRITES;
 }

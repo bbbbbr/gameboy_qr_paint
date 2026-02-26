@@ -9,6 +9,8 @@
 #include "ui_main.h"
 #include "save_and_undo.h"
 #include "help_screen.h"
+#include "sgb_mouse_on_gb.h"
+
 
 void make_and_show_qrcode(void);
 
@@ -26,7 +28,7 @@ void make_and_show_qrcode(void) {
 
         // Wait for the user to press a button before clearing QRCode
         waitpadticked_lowcpu(J_ANY);
-        waitpadup();
+        waitpadup_lowcpu(J_ANY);
 
         scroll_bkg(0,1);  // Restore default scroll
 
@@ -40,6 +42,23 @@ void make_and_show_qrcode(void) {
 
 void main(void)
 {
+    DISPLAY_ON;
+
+    // Wait 4 frames
+    // For SGB on PAL SNES this delay is required on startup, otherwise borders don't show up
+    for (uint8_t i = 4; i != 0; i--) vsync();
+
+    sgb_found = sgb_check();
+    if (sgb_found) {
+        // init joypads and install mouse hook and handler
+        joypad_init(4, &joypads);
+        sgb_mouse_install();
+
+        // // The display must be ON before calling set_sgb_border()
+        // DISPLAY_ON;
+        // set_sgb_border(border_data_tiles, sizeof(border_data_tiles), border_data_map, sizeof(border_data_map), border_data_palettes, sizeof(border_data_palettes));
+    }
+
     HIDE_SPRITES;
     ENABLE_RAM;
     SWITCH_RAM(SRAM_BANK_CALC_BUFFER); // RAM bank 0

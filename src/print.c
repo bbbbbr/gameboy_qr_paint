@@ -15,9 +15,8 @@
 
 
 bool printer_check_cancel(void) BANKED {
-    static uint8_t keys = 0, old_keys;
-    old_keys = keys; keys = joypad();
-    return (((old_keys ^ keys) & J_B) & (keys & J_B));
+    UPDATE_KEYS();
+    return (KEY_TICKED(J_B));
 }
 
 
@@ -41,10 +40,9 @@ void print_drawing(void) BANKED {
         gprintf("Not Found");
     }
 
-    waitpadup();
+    waitpadup_lowcpu(J_ALL);
     waitpadticked_lowcpu(J_ANY);
-    waitpadup();
-    UPDATE_KEYS();
+    waitpadup_lowcpu(J_ALL);
 
     ui_redraw_full();
     drawing_restore_undo_snapshot(UNDO_RESTORE_WITHOUT_REDO_SNAPSHOT);  // Don't create a Redo snapshot since it would be of the QRCode overlay on the drawing image

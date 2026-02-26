@@ -13,6 +13,8 @@
 #include "ui_menu_area.h"
 #include "sprites.h"
 
+#include "sgb_mouse_on_gb.h"
+
 // Image data
 #include <ui_main_bg.h>      // BG APA style image
 #include <ui_main_bg_cde.h>  // BG APA style image  // CDE alternate theme
@@ -35,6 +37,7 @@ static inline void ui_clamp_cursor_to_draw_area(void);
 static inline void ui_cursor_teleport_update(bool cursor_in_drawing, uint16_t cursor_last_x, uint16_t cursor_last_y);
 static void ui_process_input(bool cursor_in_drawing);
 
+static void ui_handle_input_sgb_mouse(bool cursor_in_drawing);
 
 void ui_init(void) NONBANKED {
     HIDE_BKG;
@@ -140,21 +143,23 @@ static void ui_draw_width_handle_input(void) {
 
 void ui_cursor_speed_update_settings(void) BANKED {
 
+    // SGB Mouse speed settings handled separately in ui_handle_input_sgb_mouse()
+
     cursor_continuous_move = true;
     // Set acceleration factor and max speed
     switch (app_state.cursor_speed_mode) {
         // Pixel step mode only moves on first press
-        case CURSOR_SPEED_MODE_PIXELSTEP: cursor_accel_limit = CURSOR_SPEED_PIXELSTEP;
+        case CURSOR_SPEED_MODE_PIXELSTEP: cursor_accel_limit  = CURSOR_SPEED_PIXELSTEP;
                                           cursor_accel_factor = CURSOR_ACCEL_FACTOR_FULL;
                                           cursor_continuous_move = false;
                                           break;
 
         // All other modes move as long as button pressed
-        case CURSOR_SPEED_MODE_SLOW:      cursor_accel_limit = CURSOR_SPEED_SLOW;
+        case CURSOR_SPEED_MODE_SLOW:      cursor_accel_limit  = CURSOR_SPEED_SLOW;
                                           cursor_accel_factor = CURSOR_ACCEL_FACTOR_SLOW;
                                           break;
         default:
-        case CURSOR_SPEED_MODE_MEDIUM:    cursor_accel_limit = CURSOR_SPEED_NORMAL;
+        case CURSOR_SPEED_MODE_MEDIUM:    cursor_accel_limit  = CURSOR_SPEED_NORMAL;
                                           cursor_accel_factor = CURSOR_ACCEL_FACTOR_NORMAL;
                                           break;
 
@@ -362,6 +367,8 @@ static void ui_process_input(bool cursor_in_drawing) {
     cursor_last_x = app_state.cursor_x;
     cursor_last_y = app_state.cursor_y;
 
+    if (sgb_found) ui_handle_input_sgb_mouse(cursor_in_drawing);
+
     if ((!cursor_in_drawing) || KEY_PRESSED(UI_CURSOR_SPEED_BUTTON)) {
         // For the main UI area there is only one speed of cursor movement (fast, with no inertia)
         if      (KEYS() & J_LEFT)  { if (app_state.cursor_x > CURSOR_SPEED_UI_X) app_state.cursor_x -= CURSOR_SPEED_UI_X; }
@@ -425,3 +432,68 @@ static void ui_process_input(bool cursor_in_drawing) {
     app_state.cursor_8u_cache_y = CURSOR_TO_8U_Y();
 }
 
+
+static void ui_handle_input_sgb_mouse(bool cursor_in_drawing) {
+
+    // For SGB Mouse button mapping onto J_A and J_B see UPDATE_KEYS()
+
+    uint16_t delta_x, delta_y;
+
+    // For 2x speed, instead of scaling up the current mouse deltas
+    // which yields jagged steps, blend current + previous deltas
+    bool fast_2x_add_prev_frame_deltas = false;
+
+    if (sgb_mouse_input_is_valid) {
+
+        uint8_t mouse_move_upshift;
+        if ((!cursor_in_drawing) || KEY_PRESSED(UI_CURSOR_SPEED_BUTTON)) {
+            delta_x = mouse_x_move << MOUSE_ACCEL_UPSHIFT_FAST;
+            delta_y = mouse_y_move << MOUSE_ACCEL_UPSHIFT_FAST;
+            fast_2x_add_prev_frame_deltas = true;
+        } else {
+            // Split this out instead of using a control var for the amoutn of upshift
+            // so that hopefully the compiler can optimize the shifts more
+            switch (app_state.cursor_speed_mode) {
+                case CURSOR_SPEED_MODE_PIXELSTEP: delta_x = mouse_x_move << MOUSE_ACCEL_UPSHIFT_PIXELSTEP;
+                                                  delta_y = mouse_y_move << MOUSE_ACCEL_UPSHIFT_PIXELSTEP;
+                                                  break;
+                case CURSOR_SPEED_MODE_SLOW:      delta_x = mouse_x_move << MOUSE_ACCEL_UPSHIFT_SLOW;
+                                                  delta_y = mouse_y_move << MOUSE_ACCEL_UPSHIFT_SLOW;
+                                                  break;
+                default:
+                case CURSOR_SPEED_MODE_MEDIUM:    delta_x = mouse_x_move << MOUSE_ACCEL_UPSHIFT_NORMAL;
+                                                  delta_y = mouse_y_move << MOUSE_ACCEL_UPSHIFT_NORMAL;
+                                                  break;
+                case CURSOR_SPEED_MODE_FAST:      delta_x = mouse_x_move << MOUSE_ACCEL_UPSHIFT_FAST;
+                                                  delta_y = mouse_y_move << MOUSE_ACCEL_UPSHIFT_FAST;
+                                                  fast_2x_add_prev_frame_deltas = true;
+                                                  break;
+            }
+        }
+
+        if (fast_2x_add_prev_frame_deltas) {
+            delta_x += mouse_x_move_last << MOUSE_ACCEL_UPSHIFT_FAST;
+            delta_y += mouse_y_move_last << MOUSE_ACCEL_UPSHIFT_FAST;
+        }
+
+        // Apply X movement if present, clamp to screen limits
+        if (mouse_x_move < 0) {
+            if (app_state.cursor_x > -delta_x) app_state.cursor_x += delta_x;
+            else                               app_state.cursor_x = 0;
+        }
+        else if (mouse_x_move > 0) {
+            if (app_state.cursor_x < (SCREEN_X_MAX_16U - delta_x)) app_state.cursor_x += delta_x;
+            else                                                   app_state.cursor_x = SCREEN_X_MAX_16U;
+        }
+
+        // Apply Y movement if present, clamp to screen limits
+        if (mouse_y_move < 0) {
+            if (app_state.cursor_y > -delta_y) app_state.cursor_y += delta_y;
+            else                               app_state.cursor_y = 0;
+        }
+        else if (mouse_y_move > 0) {
+            if (app_state.cursor_y < (SCREEN_Y_MAX_16U - delta_y)) app_state.cursor_y += delta_y;
+            else                                                   app_state.cursor_y = SCREEN_Y_MAX_16U;
+        }
+    }
+}
