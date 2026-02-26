@@ -2,6 +2,7 @@
 
 ## Version 0.92
 - Added SGB Mouse support
+- Added SGB border
 
 ## Version 0.91
 - Added Game Boy Printer support

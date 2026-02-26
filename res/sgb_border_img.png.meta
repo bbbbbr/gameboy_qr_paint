@@ -1,0 +1,7 @@
+-b 255
+-map
+-bpp 4
+-max_palettes 4
+-pack_mode sgb
+-use_map_attributes
+-keep_palette_order
