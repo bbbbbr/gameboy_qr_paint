@@ -1,5 +1,8 @@
 # Changelog
 
+## Version 0.92
+- Added SGB Mouse support
+
 ## Version 0.91
 - Added Game Boy Printer support
 - Added Holding B button for fast cursor speed in draw area

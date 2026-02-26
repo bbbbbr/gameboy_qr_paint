@@ -23,6 +23,7 @@ Downloadable ROM available on itch: https://bbbbbr.itch.io/game-boy-qr-paint
 - Adjustable Draw speed (Fast, Medium, Slow, Pixel Step)
 - 2 Draw colors (Black and White)
 - Game Boy Printer support
+- SNES Mouse support through Super Game Boy (SGB)
 
 
 ## Usage
