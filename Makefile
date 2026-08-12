@@ -7,7 +7,7 @@ endif
 LCC = $(GBDK_HOME)bin/lcc
 PNG2ASSET = $(GBDK_HOME)bin/png2asset
 
-VERSION=0.9.6
+VERSION=0.9.7
 
 # Set platforms to build here, spaced separated. (These are in the separate Makefile.targets)
 # They can also be built/cleaned individually: "make gg" and "make gg-clean"
@@ -41,7 +41,7 @@ CFLAGS += -Wf-MMD -Wf-Wp-MP # Header file dependency output (-MMD) for Makefile 
 # Set default type:
 ifndef CART_TYPE
 ifeq ($(PLAT),duck)
-	CART_TYPE=md2
+	CART_TYPE=md20s
 else
 	CART_TYPE=mbc5
 endif
@@ -221,7 +221,7 @@ qrcodeluts:
 
 package:
 	mkdir -p "$(PACKAGE_DIR)"
-	zip -j -9 "$(PACKAGE_DIR)/$(VERSION)_$(PROJECTNAME)_megaduck.zip"            Changelog.md LICENSE README.md build/duck.md2/*.duck.md2 build/duck.mbc5/*.duck.mbc5 $(SAVDIR)/$(PROJECTNAME).sav
+	zip -j -9 "$(PACKAGE_DIR)/$(VERSION)_$(PROJECTNAME)_megaduck.zip"            Changelog.md LICENSE README.md build/duck.md20s/*.duck.md20s build/duck.mbc5/*.duck.mbc5 $(SAVDIR)/$(PROJECTNAME).sav
 	zip -j -9 "$(PACKAGE_DIR)/$(VERSION)_$(PROJECTNAME)_gameboy.zip"             Changelog.md LICENSE README.md build/gbc/*.gbc $(SAVDIR)/$(PROJECTNAME).sav
 	zip -j -9 "$(PACKAGE_DIR)/$(VERSION)_$(PROJECTNAME)_gameboy_usb_mouse.zip"   Changelog.md LICENSE README.md build/gbc_usb_mouse/*.gbc $(SAVDIR)/$(PROJECTNAME).sav
 	zip -j -9 "$(PACKAGE_DIR)/$(VERSION)_$(PROJECTNAME)_analogue_pocket.zip"     Changelog.md LICENSE README.md build/pocket/*.pocket $(SAVDIR)/$(PROJECTNAME).sav

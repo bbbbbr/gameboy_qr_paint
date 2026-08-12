@@ -90,14 +90,14 @@ this link port accessory, including the mouse support.
 ## Mega Duck
 QR-Paint can only be used on the Mega Duck when Cart SRAM is available.
 This is possible when using:
-- A laptop with the add-on Memory Cart in the secondary cart slot (use duck.md2 build)
+- A laptop with the add-on Memory Cart in the secondary cart slot (use duck.md20s build)
 - A GB->Duck cart slot adapter and an MBC5 cart (use duck.mbc5 build)
-- A cart with built-in SRAM (the ManCloud flash cart) (use duck.md2 build)
+- A cart with built-in SRAM (the ManCloud flash cart) (use duck.md20s build)
 
 To run in an emulator, use:
-- `superjunior_sameduck --duck-printer-1pass --duck-sram-cart qr_paint.duck.md2`
-This requires `SuperJuniorSameDuck v1.0.1`:
-- https://github.com/bbbbbr/SuperJuniorSameDuck/releases/tag/Duck_v1.0.1
+- `superjunior_sameduck --duck-printer-1pass qr_paint.duck.md20s`
+This requires `SuperJuniorSameDuck v1.0.3`:
+- https://github.com/bbbbbr/SuperJuniorSameDuck/releases/tag/Duck_v1.0.3
 
 
 ## Technical details

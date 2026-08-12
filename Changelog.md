@@ -1,5 +1,7 @@
 # Changelog
 
+## Version 0.97
+- Changed MegaDuck build to use .md20s extension for explicit MD2 ROM + MD0 style SRAM
 
 ## Version 0.96
 - Added Undo/Redo hotkey as SELECT + B/A

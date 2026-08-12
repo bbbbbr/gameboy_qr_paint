@@ -3,8 +3,8 @@
 
 // still need to do banked calls for duck
 
-#if defined(CART_TYPE_md2)
-    // .md2
+#if defined(CART_TYPE_md20s)
+    // .md20s
     // ROM Upper switchable 16K banks (1-7)
     //
     // When used on MegaDuck Laptop, SRAM *may* be on a secondary cart in memory cart slot:
